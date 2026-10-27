@@ -77,12 +77,41 @@ function finishGame(s,events){
  }else if(living.length===1){
   s.winner=living[0];s.result='victory';s.victoryMode='base';
  }else if(s.turn>TURN_LIMIT){
-  const rank=TEAMS.filter(t=>alive(s,t)).map(t=>({t,score:Object.entries(s.points).reduce((sum,[k,o])=>sum+(o===t?(k==='10,10'?5:3)*(s.cityLevels[k]??1):0),0)+s[UNIVERSITY[t].hp]+Object.values(s.technologies[t]).reduce((a,b)=>a+b,0)*2}));
+  const rank=TEAMS.filter(t=>alive(s,t)).map(t=>({t,score:scoreBreakdown(s,t).total}));
   rank.sort((a,b)=>b.score-a.score);
   s.winner=rank.length>1&&rank[0].score===rank[1].score?null:rank[0]?.t??null;
   s.result=s.winner===s.playerTeam?'victory':s.winner?'defeat':'draw';s.victoryMode='score';
   events.push({type:'score',text:'30라운드 점수로 승부 결정'});
  }
+}
+export function scoreBreakdown(s,t){
+ const eligible=alive(s,t);
+ const territory=eligible?Object.entries(s.points).reduce((n,[k,owner])=>n+(owner===t?(k==='10,10'?5:3)*(s.cityLevels[k]??1):0),0):0;
+ const base=eligible?s[UNIVERSITY[t].hp]:0;
+ const science=eligible?Object.values(s.technologies[t]).reduce((a,b)=>a+b,0)*2:0;
+ return {eligible,territory,base,science,total:territory+base+science};
+}
+function computeAttack(s,team,u,t){
+ const bonus=level(s,team,'military');
+ if(t.kind==='unit'){
+  const victim=s.units.find(v=>v.id===t.id);if(!victim)return {error:'대상이 없습니다.'};
+  const koreaFormation=victim.team==='enemy'&&s.units.some(v=>v.team==='enemy'&&v.id!==victim.id&&distance(v,victim)===1)?1:0;
+  const defense=stats(victim).defense+Math.floor(level(s,victim.team,'defense')/2)+koreaFormation;
+  const damage=Math.max(1,stats(u).attack+bonus-defense);
+  return {damage,targetHp:victim.hp,remainingHp:Math.max(0,victim.hp-damage)};
+ }
+ if(t.kind==='base'){
+  const targetHp=s[UNIVERSITY[t.team].hp];
+  const damage=Math.max(1,stats(u).attack+bonus-(level(s,t.team,'defense')>=2?1:0));
+  return {damage,targetHp,remainingHp:Math.max(0,targetHp-damage)};
+ }
+ return {error:'지원하지 않는 대상입니다.'};
+}
+export function previewAttack(s,team,id,target){
+ const error=canAct(s,team,id);if(error)return {error};
+ const u=s.units.find(v=>v.id===id);
+ const t=targets(s,u).find(v=>v.kind===target?.kind&&(v.id===target.id||(v.kind==='base'&&v.team===target.team)));
+ return t?computeAttack(s,team,u,t):{error:'공격 범위에 적이 없습니다.'};
 }
 function action(s,team,order){
  const events=[],current=s;const id=order.id;
@@ -106,19 +135,16 @@ function action(s,team,order){
   const t=legal.find(v=>v.kind===order.target?.kind&&(v.id===order.target.id||v.kind==='base'&&v.team===order.target.team));
   if(!t)return {error:'공격 범위에 적이 없습니다.'};
   s.acted.push(id);
-  const bonus=level(s,team,'military'),attacker={kind:'unit',id};
+  const hit=computeAttack(s,team,u,t);if(hit.error)return {error:hit.error};
+  const attacker={kind:'unit',id};
   if(t.kind==='unit'){
-   const victim=s.units.find(v=>v.id===t.id);
-   const koreaFormation=victim.team==='enemy'&&s.units.some(v=>v.team==='enemy'&&v.id!==victim.id&&distance(v,victim)===1)?1:0;
-   const defense=stats(victim).defense+Math.floor(level(s,victim.team,'defense')/2)+koreaFormation;
-   const amount=Math.max(1,stats(u).attack+bonus-defense);
-   victim.hp-=amount;events.push({type:'attack',from:attacker,target:t,amount,team});
+   const victim=s.units.find(v=>v.id===t.id);victim.hp=hit.remainingHp;
+   events.push({type:'attack',from:attacker,target:t,amount:hit.damage,team});
    if(victim.hp<=0){s.units=s.units.filter(v=>v.id!==victim.id);events.push({type:'destroy',id:victim.id,team:victim.team});}
   }else if(t.kind==='base'){
-   const amount=Math.max(1,stats(u).attack+bonus-(level(s,t.team,'defense')>=2?1:0));
-   s[UNIVERSITY[t.team].hp]=Math.max(0,s[UNIVERSITY[t.team].hp]-amount);
-   events.push({type:'attack',from:attacker,target:t,amount,team});
-  }else return {error:'지원하지 않는 공격 대상입니다.'};
+   s[UNIVERSITY[t.team].hp]=hit.remainingHp;
+   events.push({type:'attack',from:attacker,target:t,amount:hit.damage,team});
+  }
  }else if(order.type==='recruit'){
   if(s.phaseTeam!==team||s.result)return {error:'모집할 수 없는 차례입니다.'};
   const kind=order.kind??'infantry',cost={infantry:5,scout:4,cavalry:9,siege:10}[kind];
@@ -189,9 +215,9 @@ export function endSequentialRound(input){
  const events=[],snapshots=[];
  const i=TEAMS.indexOf(s.playerTeam),order=[TEAMS[(i+1)%3],TEAMS[(i+2)%3]];
  for(const team of order){
-  const before=structuredClone(s);
+  const before=structuredClone(s),start=events.length;
   aiPhase(s,team,events);
-  snapshots.push({team,before,state:structuredClone(s)});
+  snapshots.push({team,before,state:structuredClone(s),events:events.slice(start)});
   if(s.result)break;
  }
  s.turn++;s.phaseTeam=s.playerTeam;s.acted=[];
