@@ -241,6 +241,8 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
       if(ref.kind==='unit'){
         const u=after.units.find(u=>u.id===ref.id)??before.units.find(u=>u.id===ref.id);
         const mesh=unitMeshes.get(ref.id);
+        // Never draw a projectile path from a unit concealed by fog of war.
+        if(!mesh && u?.team!==before.playerTeam && before.ruleset==='sequential')return null;
         return mesh?mesh.position.clone().add(new T.Vector3(0,.5,0)):u?new T.Vector3(coord(u.x),.5,coord(u.z)):null;
       }
       if(ref.kind==='structure'){
