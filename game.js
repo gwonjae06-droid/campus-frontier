@@ -137,7 +137,7 @@ $('#mobileReset').onclick=()=>{$('#dialog').close();$('#resetDialog').showModal(
  // PC shortcuts do not capture form input, dialogs, browser shortcuts, or the home screen.
  addEventListener('keydown',e=>{
   if(!board||!document.body.classList.contains('in-battle')||document.querySelector('dialog[open]')||e.target.closest('input,textarea,select,[contenteditable="true"]')||e.altKey||e.metaKey)return;
-  const k=e.key.toLowerCase();if(e.ctrlKey&&k!=='enter')return;
+  const k=/^Key[A-Z]$/.test(e.code)?e.code.slice(3).toLowerCase():/^Digit[0-9]$/.test(e.code)?e.code.slice(5):e.key.toLowerCase();if(e.ctrlKey&&k!=='enter')return;
   const movement={w:[0,45],s:[0,-45],a:[45,0],d:[-45,0]};
   if(movement[k]){e.preventDefault();board.panBy(...movement[k]);return;}
   if(k==='q'||k==='e'){e.preventDefault();board.setPitch(Number($('#pitch').value)+(k==='q'?-3:3));return;}
