@@ -11,7 +11,7 @@ for(let x=15;x<=18;x++)for(let z=15;z<=18;z++)assert.ok(isEnemyCampus(x,z));
 for(let x=15;x<=18;x++)for(let z=2;z<=5;z++)assert.ok(isRivalCampus(x,z));
 assert.equal([[isCampus,2,5],[isEnemyCampus,15,18],[isRivalCampus,18,2]].every(([f,x,z])=>f(x,z)),true);
 const s=initialState('standard');
-assert.equal(s.version,12);
+assert.equal(s.version,13);
 assert.ok(s.units.every(u=>passable(u.x,u.z)));
 for(const g of [...GATES,...ENEMY_GATES,...RIVAL_GATES])assert.ok(passable(g.x,g.z),`invalid gate at ${g.x},${g.z}`);
 const official=makeCampus(JSON.parse(readFileSync('data/skku-campus.json','utf8')));
