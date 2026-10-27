@@ -60,7 +60,7 @@ export function canBuild(s,p,type,x,z){
  if(type==='road'){if((s.roads??[]).includes(key(x,z))||p.builds.some(b=>b.x===x&&b.z===z))return '이미 도로 또는 건설 예약이 있는 타일입니다.';if(!passable(x,z))return '도로는 이동 가능한 자기 영토에만 건설할 수 있습니다.';if(!ownTerritory(s,{team:'ally',x,z}))return '자기 영토에만 도로를 건설할 수 있습니다.';if(availableGold(s,p)<PRICE.road)return '운영력이 부족합니다.';return null;}
  if(DEPOSITS.some(d=>d.x===x&&d.z===z))return '개발 자원 타일에는 방어 시설을 설치할 수 없습니다.';
  if((p.projects??[]).some(o=>o.site==='home'))return '캠퍼스에서 자원 개발을 예약했습니다.';
- if(s.structures.some(b=>b.ready>s.turn)||(s.pendingRecruits??[]).length||s.labConstruction?.home)return '캠퍼스 작업 슬롯에서 생산이 진행 중입니다.';
+ if(s.structures.some(b=>b.ready>s.turn)||(s.pendingRecruits??[]).length||s.labConstruction?.home||s.grandConstruction)return '캠퍼스 작업 슬롯에서 생산이 진행 중입니다.';
  if(p.builds.length)return '캠퍼스 작업 슬롯은 한 턴에 하나입니다.';
  if(!passable(x,z)||terrain(x,z)==='resource')return '빈 일반 타일을 선택하세요.';
  if(s.units.some(u=>u.x===x&&u.z===z)||s.structures.some(b=>b.x===x&&b.z===z))return '이미 점유된 타일입니다.';
