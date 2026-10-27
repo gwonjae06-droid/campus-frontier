@@ -50,7 +50,7 @@ for(const fn of ['campusBorder(3.5,3.5','campusBorder(16.5,16.5','campusBorder(1
 assert.ok(board.includes('CAMPUS_PLOT_WIDTH/2-.065'));
 assert.ok(board.includes('s.scale.set(3.65,.642,1)'),'label aspect ratio must not be stretched');
 assert.ok(Math.abs(3.65/.642-512/90)<.02);
-assert.ok(html.includes('game.js?v=swipe-v17'));
+assert.ok(html.includes('game.js?v=explore-v18'));
 assert.ok(!html.includes('id="pitchValue"')&&!html.includes('id="pitch"'));
 assert.ok(game.includes("board.js?v=17"));
 assert.ok(board.includes('campus.js?v=16')&&board.includes('camera.js?v=17'));

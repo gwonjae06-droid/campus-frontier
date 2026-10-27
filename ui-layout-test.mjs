@@ -15,7 +15,7 @@ for(const action of ['attack','guard','capture','heal']){
  assert.ok(html.includes(`data-action="${action}"`),`missing floating ${action} action`);
 }
 assert.ok(html.includes('overlay-ui.css?v=vision-v10'));
-assert.ok(html.includes('game.js?v=swipe-v17'));
+assert.ok(html.includes('game.js?v=explore-v18'));
 assert.ok(html.includes('tactical-hud-v11.css?v=2'));
 assert.ok(!html.includes('id="viewToggle"'));
 assert.ok(!html.includes('id="selection"'));
