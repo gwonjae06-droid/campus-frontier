@@ -117,9 +117,20 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  for(const [id,o] of Object.entries(plan.orders)){const u=input.units.find(v=>v.id===id&&v.team==='ally');const e=canOrder(input,u,o,plan);if(e)throw Error(e);}
  const researchChoice=Object.hasOwn(plan,'research')?plan.research:input.research.ally.active;
  const researchError=canResearch(input,'ally',researchChoice);if(researchError)throw Error(researchError);
+ if(plan.scholarshipTech!==undefined){
+  const r=input.research.ally;
+  if(plan.scholarshipTech!==researchChoice||!researchChoice||!(r.scholarship>0)||r.discounted?.[researchChoice])
+   throw Error('학문 할인은 미완료 현재 연구에 한 번만 사용할 수 있습니다.');
+ }
  for(const o of plan.projects??[]){const e=canProject(input,accepted,o,availableGold(input,accepted));if(e)throw Error(e);accepted.projects.push(o);}
  const growthAI=aiGrowth(input,'enemy'),growthRival=input.gameMode==='standard'?aiGrowth(input,'rival'):null;
  const s=structuredClone(input),events=[],orders={...enemy,...plan.orders},damage=new Map(),baseHits={ally:{},enemy:{},rival:{}};
+ if(plan.scholarshipTech!==undefined){
+  s.research.ally.scholarship=(s.research.ally.scholarship??0)-1;
+  s.research.ally.discounted??={};
+  s.research.ally.discounted[researchChoice]=3;
+  events.push({type:'scholarship-use',team:'ally',text:`${researchChoice} 연구 -3 RP`});
+ }
  s.gold=availableGold(input,plan);
  s.enemyGold-=growthAI.projects.reduce((sum,o)=>sum+PROJECTS[o.type].cost,0);
  if(growthRival)s.rivalGold-=growthRival.projects.reduce((sum,o)=>sum+PROJECTS[o.type].cost,0);
