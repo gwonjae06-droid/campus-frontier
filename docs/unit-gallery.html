@@ -1,0 +1,24 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>대학전선 · 12종 부대 도감</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#e9eee8;color:#22362f;font:16px system-ui}header{position:relative;z-index:1;padding:18px 24px}h1{margin:0 0 8px;font-size:24px}button,select{font:inherit;padding:6px 12px}#grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 16px 16px}.card{height:clamp(170px,calc((100vh - 150px)/3),250px);border:1px solid #abbdb0;border-radius:12px;background:#fff8;position:relative}.card h2{position:relative;z-index:1;font-size:15px;margin:12px}.card p{z-index:1;position:absolute;bottom:0;margin:10px;font-size:12px}.view{position:absolute;inset:30px 0 27px}canvas{position:fixed;inset:0;pointer-events:none}body.gray canvas{filter:grayscale(1)}@media(max-width:600px){#grid{grid-template-columns:repeat(2,1fr)}.card{height:220px}}#status{font-size:12px}</style>
+<header><h1>대학전선 · 학교별 부대 도감</h1><button id="gray">흑백 실루엣</button> <select id="angle" aria-label="시점"><option value="iso">게임 시점</option><option value="front">정면</option></select> <span id="status">렌더링 준비 중</span></header><main id="grid"></main>
+<script type="module">
+import * as T from '../vendor/three.module.js';
+import {unitModel} from '../unit-model.js?v=43';
+const schools=[['ally','성균관대',['도포 · 장방패','지도통 · 경장 도포','관모 · 친위 기병','목제 균형추 투석기']],['enemy','고려대',['중갑 · 전투도끼','쌍검 · 공격 정찰','중장갑 돌격 기병','장갑 지붕 · 공성추']],['rival','연세대',['삼각 방패 · 세검','경량 망토 · 쇠뇌','은빛 마갑 · 기동 기병','가로 활대 · 정밀 노포']]];
+const kinds=['infantry','scout','cavalry','siege'],names=['보병','정찰','기동대','공성대'];
+const renderer=new T.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setClearColor(0xe9eee8,1);document.body.append(renderer.domElement);
+const materials=new Map(),mat=c=>{if(!materials.has(c))materials.set(c,new T.MeshStandardMaterial({color:c,roughness:.85}));return materials.get(c);};
+const views=[];
+for(const [team,label,details] of schools)kinds.forEach((kind,i)=>{
+ const card=document.createElement('section');card.className='card';card.innerHTML=`<h2>${label} · ${names[i]}</h2><div class="view"></div><p>${details[i]}</p>`;document.querySelector('#grid').append(card);
+ const scene=new T.Scene();scene.add(new T.HemisphereLight(0xffffff,0x80988d,1.9));const light=new T.DirectionalLight(0xfff2d8,2.8);light.position.set(-3,6,4);scene.add(light);scene.add(unitModel({id:team+kind,team,kind},null,null,mat));
+ views.push({element:card.querySelector('.view'),scene});
+});
+const camera=new T.OrthographicCamera(-1,1,1,-1,.01,20);let dirty=true;
+document.querySelector('#gray').onclick=()=>document.body.classList.toggle('gray');document.querySelector('#angle').onchange=()=>dirty=true;addEventListener('resize',()=>dirty=true);addEventListener('scroll',()=>dirty=true);
+function draw(){requestAnimationFrame(draw);if(!dirty)return;dirty=false;renderer.setSize(innerWidth,innerHeight);renderer.setScissorTest(false);renderer.clear();renderer.setScissorTest(true);let calls=0,triangles=0;
+ for(const {element,scene} of views){const r=element.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)continue;const aspect=r.width/r.height;camera.left=-.83*aspect;camera.right=.83*aspect;camera.top=.83;camera.bottom=-.83;camera.position.set(...(document.querySelector('#angle').value==='front'?[0,1,-4]:[2,2.4,-3]));camera.lookAt(0,.63,0);camera.updateProjectionMatrix();renderer.setViewport(r.left,innerHeight-r.bottom,r.width,r.height);renderer.setScissor(r.left,innerHeight-r.bottom,r.width,r.height);renderer.render(scene,camera);calls+=renderer.info.render.calls;triangles+=renderer.info.render.triangles;}
+ document.querySelector('#status').textContent=`표시된 모델: ${calls} draw calls · ${triangles} triangles`;
+}draw();
+</script></html>
+

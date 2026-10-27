@@ -1,7 +1,7 @@
 // The Olympus campaign uses this direct-action, sequential-turn controller.
 // v13 simultaneous campaign remains stored separately and can be restored via git.
 import {createSequentialGame,applySequentialAction,endSequentialRound,UNIVERSITY,TEAMS,BRANCHES,technologyCost,level,cityCost,cityIncome} from './sequential-mode.js?v=42';
-import {createBoard} from './board.js?v=41';
+import {createBoard} from './board.js?v=43';
 import {emptyPlan,reachable,targets,stats,terrain,key,TURN_LIMIT} from './simulation.js?v=18';
 import {visibleTiles,exploredTiles} from './vision.js?v=18';
 import {createResearchPanel} from './research-panel.js?v=5';

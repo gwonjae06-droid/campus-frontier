@@ -1,4 +1,4 @@
-import {unitModel} from './unit-model.js?v=22';
+import {unitModel} from './unit-model.js?v=43';
 import {DEFAULT_PITCH,DEFAULT_ANGLE,clampPitch,orbitPosition,mapHalfSpan,orthographicPixelScales} from './camera.js?v=22';
 import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';

@@ -52,6 +52,6 @@ assert.ok(board.includes('s.scale.set(3.65,.642,1)'),'label aspect ratio must no
 assert.ok(Math.abs(3.65/.642-512/90)<.02);
 assert.ok(html.includes('game.js?v=controls-v23'));
 assert.ok(html.includes('id="pitchValue"')&&html.includes('id="pitch"'));
-assert.ok(game.includes("board.js?v=23"));
+assert.ok(game.includes("board.js?v=43"));
 assert.ok(board.includes('campus.js?v=22')&&board.includes('camera.js?v=22'));
 console.log('PASS: camera angle, label proportions, no independent XZ stretching, uniform 4×4 frames');
