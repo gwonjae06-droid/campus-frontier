@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node test.mjs && node growth-test.mjs && node score-test.mjs && node mobile-expansion-test.mjs"
+    "test": "node test.mjs && node growth-test.mjs && node score-test.mjs && node mobile-expansion-test.mjs && node --check game.js && node --check board.js && node --check growth.js && node --check simulation.js && node --check touch-gestures.js"
   },
   "engines": {
     "node": ">=18"
