@@ -22,10 +22,10 @@ export const currentUnit=(s,id)=>s.units.find(u=>u.id===id&&u.team===s.turn);
 export function legalActions(s){
  if(s.winner!==null)return [];
  const t=s.turn, out=[], home={x:t===0?0:8,y:4};
- const spawn=s.units.some(u=>u.x===home.x+ (t===0?1:-1)&&u.y===home.y);
+ const spawnX=home.x+(t===0?1:-1),spawnY=[4,3,5].find(y=>!s.units.some(u=>u.x===spawnX&&u.y===y));
  const hp=s.units.filter(u=>u.team===t).length;
- if(s.stars[t]>=3&&hp<7&&!spawn)out.push({type:'recruit',kind:'guard'});
- if(s.stars[t]>=2&&hp<7&&!spawn)out.push({type:'recruit',kind:'scout'});
+ if(s.stars[t]>=3&&hp<7&&spawnY!==undefined)out.push({type:'recruit',kind:'guard'});
+ if(s.stars[t]>=2&&hp<7&&spawnY!==undefined)out.push({type:'recruit',kind:'scout'});
  for(const u of s.units.filter(u=>u.team===t)){
   const steps=UNIT_STATS[u.kind].move;
   for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
@@ -62,8 +62,9 @@ export function applyAction(s,action){
   n.baseHP[1-t]-=UNIT_STATS[unit.kind].attack;
   n.log.unshift('상대 캠퍼스를 공격했습니다.');
  }else if(action.type==='recruit'){
-  const x=t===0?1:7;
-  n.units.push({id:n.nextId++,team:t,kind:action.kind,hp:UNIT_STATS[action.kind].hp,x,y:4});
+  const x=t===0?1:7,y=[4,3,5].find(row=>!n.units.some(u=>u.x===x&&u.y===row));
+  if(y===undefined)throw Error('출전 칸이 모두 막혔습니다.');
+  n.units.push({id:n.nextId++,team:t,kind:action.kind,hp:UNIT_STATS[action.kind].hp,x,y});
   n.stars[t]-=action.kind==='guard'?3:2;
   n.log.unshift(`${action.kind==='guard'?'수비대':'정찰대'} 모집`);
  }
