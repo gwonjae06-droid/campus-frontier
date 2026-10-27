@@ -10,7 +10,7 @@ const s=initialState();assert.equal(s.gold,10);assert.equal(s.homeHP,30);
 const p=emptyPlan();p.builds=[{type:'recruit',x:3,z:1}];const n=resolveTurn(s,p,{});
 assert.equal(s.gold,10);assert.equal(n.state.gold,10);assert.equal(n.state.units.filter(u=>u.team==='ally').length,3);
 assert.ok(canBuild(s,emptyPlan(),'wall',3,1));assert.ok(canBuild(s,p,'wall',1,1));
-assert.equal(canMove(s,s.units[1],3,7),null);assert.ok(canMove(s,s.units[0],7,3));
+assert.equal(canMove(s,s.units[1],3,7),null);assert.ok(canMove(s,s.units[0],8,3));
 const duel=initialState();duel.enemyGold=0;duel.units=[unit('a1','ally',6,6,2),unit('e1','enemy',7,6,2)];
 assert.equal(resolveTurn(duel,emptyPlan(),{}).state.units.length,2);
 assert.equal(resolveTurn(duel,order('a1',attack('e1')),{e1:attack('a1')}).state.units.length,0);
@@ -26,7 +26,7 @@ arrived.points['8,6']='enemy';const hostile=resolveTurn(arrived,order('a1',{type
 const build=initialState();build.research.ally.done=['defense','towers'];build.units=[unit('e1','enemy',6,1)];const bp=emptyPlan();bp.builds=[{type:'tower',x:5,z:1}];const t=resolveTurn(build,bp,{}).state;assert.equal(t.units[0].hp,10);assert.ok(canBuild(t,emptyPlan(),'wall',1,1));
 const t2=resolveTurn(t,emptyPlan(),{}).state;assert.equal(t2.units[0].hp,10);assert.ok(resolveTurn(t2,emptyPlan(),{}).events.some(e=>e.type==='attack'));
 const collide=initialState();collide.units=[unit('a1','ally',6,6),unit('e1','enemy',8,6)];const c=resolveTurn(collide,order('a1',{type:'move',x:7,z:6}),{e1:{type:'move',x:7,z:6}});assert.equal(c.state.units[0].x,6);assert.equal(c.state.units[1].x,8);
-const win=initialState();win.units=[unit('a1','ally',15,17)];win.enemyHP=4;assert.equal(resolveTurn(win,order('a1',{type:'attack',target:{kind:'base',team:'enemy'}}),{}).state.result,'victory');
+const win=initialState();win.units=[unit('a1','ally',14,17)];win.enemyHP=4;assert.equal(resolveTurn(win,order('a1',{type:'attack',target:{kind:'base',team:'enemy'}}),{}).state.result,'victory');
 const limited=initialState();limited.gold=0;assert.throws(()=>resolveTurn(limited,p,{}));
 assert.deepEqual(resolveTurn(s,p),resolveTurn(s,p));assert.deepEqual(resolveTurn(JSON.parse(JSON.stringify(s)),JSON.parse(JSON.stringify(p))),resolveTurn(s,p));
 const campus=JSON.parse(readFileSync('data/skku-campus.json'));assert.equal(campus.buildings.length,56);assert.ok(campus.buildings.every(b=>b.o.length>=3&&b.o.every(p=>p.every(Number.isFinite))));
