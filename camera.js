@@ -1,8 +1,10 @@
-export const DEFAULT_PITCH=56, MIN_PITCH=50, MAX_PITCH=62;
-export const DEFAULT_ANGLE=Math.PI/4, ANGLE_FREEDOM=Math.PI/24;
+// Strategy mode: fixed, orthographic isometric camera; real-time-base mode can add a separate free-camera controller later.
+export const CAMERA_MODE='strategy-fixed';
+export const DEFAULT_PITCH=56, MIN_PITCH=DEFAULT_PITCH, MAX_PITCH=DEFAULT_PITCH;
+export const DEFAULT_ANGLE=Math.PI/4, ANGLE_FREEDOM=0;
 export const clampPitch=value=>Math.max(MIN_PITCH,Math.min(MAX_PITCH,Number.isFinite(value)?value:DEFAULT_PITCH));
 export const clampAngle=value=>Math.max(DEFAULT_ANGLE-ANGLE_FREEDOM,Math.min(DEFAULT_ANGLE+ANGLE_FREEDOM,Number.isFinite(value)?value:DEFAULT_ANGLE));
-// All camera changes remain near one recognizably isometric presentation.
+// The strategic map never changes orientation or tilt while panning or zooming.
 export function orbitPosition(angle,pitch,target={x:0,y:0,z:0}){
  const radians=clampPitch(pitch)*Math.PI/180,r=38,horizontal=r*Math.cos(radians);
  const yaw=clampAngle(angle);

@@ -1,6 +1,6 @@
 import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=10';
 import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints,GATES,targets} from './simulation.js?v=10';
-import {createBoard} from './board.js?v=16';
+import {createBoard} from './board.js?v=17';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
 import {isCeasefire,canProposeCeasefire,aiAcceptsCeasefire,ceasefireUntil} from './diplomacy.js?v=10';
 const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v13';
@@ -109,10 +109,10 @@ async function execute(){if(busy||state.result)return;busy=true;selected=null;re
  $('#creditsOpen').onclick=()=>$('#creditsDialog').showModal();
  $('#game').addEventListener('pointerdown',()=>{if(compactScreen.matches&&document.body.classList.contains('panel-open'))toggleHudPanel('panel-open',$('#panelToggle'),false);});
  compactScreen.addEventListener('change',()=>toggleHudPanel('panel-open',$('#panelToggle'),!compactScreen.matches));
- $('#pitchLow').onclick=()=>board?.setPitch(50);$('#pitchHigh').onclick=()=>board?.setPitch(62);
+ 
   $('#zoomRange').oninput=e=>board?.setZoom(Number(e.target.value));
-  $('#rotateLeft').onclick=()=>board?.rotate(-1);$('#rotateRight').onclick=()=>board?.rotate(1);$('#zoomIn').onclick=()=>board?.zoomBy(.65);$('#zoomOut').onclick=()=>board?.zoomBy(-.65);
- $('#pitch').oninput=e=>board?.setPitch(Number(e.target.value));$('#resetView').onclick=()=>{setFocus(false);board?.resetView();};
+  $('#zoomIn').onclick=()=>board?.zoomBy(.65);$('#zoomOut').onclick=()=>board?.zoomBy(-.65);
+ $('#resetView').onclick=()=>{setFocus(false);board?.resetView();toast('지도를 중앙으로 옮겼습니다. 한 손가락으로 지도를 밀어 이동하세요.');};
  const showResearch=()=>{$('#growthDialog').showModal();refreshGrowth();requestAnimationFrame(renderTreeConnections);};$('#growth').onclick=showResearch;$('#openResearch').onclick=showResearch;$('#advancedTech').addEventListener('toggle',()=>{if($('#advancedTech').open)requestAnimationFrame(renderTreeConnections);});
  $('#diplomacy').onclick=()=>{$('#diplomacyDialog').showModal();refreshDiplomacy();};
  document.querySelectorAll('[data-truce]').forEach(b=>b.onclick=()=>{const target=b.dataset.truce,error=canProposeCeasefire(state,'ally',target);if(error){toast(error);return;}plan.diplomacy={target};save();refresh();toast(`${target==='enemy'?'고려대':'연세대'}에 5턴 휴전 제안을 예약했습니다.`);});
@@ -134,7 +134,7 @@ $('#mobileReset').onclick=()=>{$('#dialog').close();$('#resetDialog').showModal(
  const rivalData={};
  if(yonseiResponse.ok)rivalData.yonsei=await yonseiResponse.json();
  if(koreaResponse.ok)rivalData.korea=await koreaResponse.json();
- board=createBoard($('#game'),data,pick,null,(pitch,zoom)=>{$('#pitch').value=Math.round(pitch);$('#pitchValue').textContent=`${Math.round(pitch)}°`;$('#zoomRange').value=zoom;$('#zoomValue').textContent=`${zoom.toFixed(1)}×`;},rivalData);$('#buildingCount').textContent=board.campusCount;$('#loading').remove();refresh();try{if(!localStorage.getItem(SAVE)&&localStorage.getItem('campus-frontier-turn-v12'))toast('규칙 변경으로 새 연습을 시작합니다. 이전 저장은 별도로 보존됩니다.');}catch{}if(!storageAvailable)toast('브라우저 저장을 사용할 수 없습니다. 이번 플레이는 새로고침 시 초기화됩니다.');}catch(error){console.error('대학전선 초기화 오류',error);const loading=$('#loading');if(loading)loading.textContent=`실행 오류: ${error.message}`;else toast(`화면 오류: ${error.message} · 새로고침해 주세요.`);}
+ board=createBoard($('#game'),data,pick,null,(_pitch,zoom)=>{$('#zoomRange').value=zoom;$('#zoomValue').textContent=`${zoom.toFixed(1)}×`;},rivalData);$('#buildingCount').textContent=board.campusCount;$('#loading').remove();refresh();try{if(!localStorage.getItem(SAVE)&&localStorage.getItem('campus-frontier-turn-v12'))toast('규칙 변경으로 새 연습을 시작합니다. 이전 저장은 별도로 보존됩니다.');}catch{}if(!storageAvailable)toast('브라우저 저장을 사용할 수 없습니다. 이번 플레이는 새로고침 시 초기화됩니다.');}catch(error){console.error('대학전선 초기화 오류',error);const loading=$('#loading');if(loading)loading.textContent=`실행 오류: ${error.message}`;else toast(`화면 오류: ${error.message} · 새로고침해 주세요.`);}
 
 
 function refreshDiplomacy(){

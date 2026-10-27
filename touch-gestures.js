@@ -15,3 +15,14 @@ export function groundPan(dx,dy,angle,worldPerPixel){
  const upX=-Math.sin(angle),upZ=-Math.cos(angle);
  return {x:(-dx*rightX+dy*upX)*worldPerPixel,z:(-dx*rightZ+dy*upZ)*worldPerPixel};
 }
+
+// A single drag moves the world under the finger/mouse while orientation
+// remains fixed. The vertical isometric projection shrinks ground distances
+// by sin(pitch); correcting it gives equal movement in either screen axis.
+export function swipePan(start,dx,dy,angle,pitch,worldPerPixel,bounds){
+ const sine=Math.max(.25,Math.sin(pitch*Math.PI/180));
+ const shift=groundPan(dx,dy/sine,angle,worldPerPixel);
+ const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
+ return {x:clamp(start.x+shift.x,bounds.min,bounds.max),
+         z:clamp(start.z+shift.z,bounds.min,bounds.max)};
+}

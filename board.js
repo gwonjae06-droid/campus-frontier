@@ -1,4 +1,4 @@
-import {DEFAULT_PITCH,DEFAULT_ANGLE,clampPitch,clampAngle,orbitPosition,mapHalfSpan} from './camera.js?v=16';
+import {DEFAULT_PITCH,DEFAULT_ANGLE,orbitPosition,mapHalfSpan} from './camera.js?v=17';
 import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
 import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
@@ -7,7 +7,7 @@ import {CAMPUS_PLOT_WIDTH} from './campus-scale.js?v=15';
 import {addUrbanCell,CAMPUS_COLORS} from './urban-city.js?v=16';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
-import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
+import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,swipePan} from './touch-gestures.js?v=17';
 export const coord=n=>(n-(SIZE-1)/2)*1.12;
 export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalData={}){
   const scene=new T.Scene();scene.background=new T.Color('#1a2934');const world=new T.Group();scene.add(world);
@@ -109,17 +109,16 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   }
   function panFromGesture(m){
     const pixelWorld=(2*mapHalfSpan(SIZE,1.12,pitch,gesture.angle,w/h))/(Math.max(h,1)*gesture.startZoom);
-    const shift=groundPan(m.x-gesture.x,m.y-gesture.y,gesture.angle,pixelWorld);
     const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
-    target.x=T.MathUtils.clamp(gesture.startTarget.x+shift.x,lower,upper);
-    target.z=T.MathUtils.clamp(gesture.startTarget.z+shift.z,lower,upper);
+    const next=swipePan(gesture.startTarget,m.x-gesture.x,m.y-gesture.y,angle,pitch,pixelWorld,{min:lower,max:upper});
+    target.x=next.x;target.z=next.z;
   }
   canvas.addEventListener('pointerdown',e=>{
     if(e.pointerType==='mouse'&&e.button!==0)return;
     e.preventDefault();pointers.set(e.pointerId,pointerPos(e));
     try{canvas.setPointerCapture(e.pointerId);}catch{}
     if(pointers.size>=2)beginGesture();
-    else if(!gesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,a:angle,p:pitch,moved:false};
+    else if(!gesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,startTarget:target.clone(),startZoom:zoom,moved:false};
   });
   canvas.addEventListener('pointermove',e=>{
     if(!pointers.has(e.pointerId))return;
@@ -132,7 +131,13 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     if(gesture||!down||e.pointerId!==down.id)return;
     const dx=e.clientX-down.x,dy=e.clientY-down.y;
     if(Math.hypot(dx,dy)>7)down.moved=true;
-    if(down.moved){angle=clampAngle(down.a+dx*.0009);pitch=clampPitch(down.p+dy*.035);resize();}
+    if(down.moved){
+      const worldPerPixel=2*mapHalfSpan(SIZE,1.12,pitch,angle,w/h)/(Math.max(1,h)*down.startZoom);
+      const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
+      const next=swipePan(down.startTarget,dx,dy,angle,pitch,worldPerPixel,{min:lower,max:upper});
+      target.x=next.x;target.z=next.z;
+      resize();
+    }
   },{passive:false});
   function finishPointer(e,canceled=false){
     if(!pointers.has(e.pointerId))return;
@@ -149,10 +154,8 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   canvas.addEventListener('pointercancel',e=>finishPointer(e,true));
   canvas.addEventListener('lostpointercapture',e=>{pointers.delete(e.pointerId);if(!pointers.size){gesture=null;gestureEnded=false;down=null;}});
   canvas.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom-e.deltaY*.0018)},{passive:false});
-  function setPitch(value){pitch=clampPitch(value);resize();}
   function resetView(){pitch=DEFAULT_PITCH;angle=DEFAULT_ANGLE;setFocus(false);}
   function setFocus(value){focus=value;zoom=value?4.4:1.08;target=value?new T.Vector3(coord(3.5),.25,coord(3.5)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
-  function rotate(d){angle=clampAngle(angle+d*Math.PI/36);resize();}
   function zoomBy(d){setZoom(zoom+d);}
   async function animate(before,after,events,onPhase){
     onPhase('이동');const moves=events.filter(e=>e.type==='move');const start=performance.now();await new Promise(resolve=>{function frame(now){const t=Math.min(1,(now-start)/650),ease=t*t*(3-2*t);for(const m of moves){const mesh=unitMeshes.get(m.id);if(mesh)mesh.position.set(T.MathUtils.lerp(coord(m.from.x),coord(m.to.x),ease),Math.sin(t*Math.PI)*.07,T.MathUtils.lerp(coord(m.from.z),coord(m.to.z),ease));}if(t<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame)});
@@ -161,5 +164,5 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     await new Promise(resolve=>setTimeout(resolve,400));cleanup(flashes);onPhase('정산');await new Promise(resolve=>setTimeout(resolve,200));
   }
   function render(){requestAnimationFrame(render);renderer.render(scene,camera)}render();
-  return {sync,setFocus,setPitch,setZoom,resetView,rotate,zoomBy,animate,campusCount:campus.group.userData.buildingCount,rivalCounts:{korea:korea.group.userData.buildingCount,yonsei:yonsei.group.userData.buildingCount}};
+  return {sync,setFocus,setZoom,resetView,zoomBy,animate,campusCount:campus.group.userData.buildingCount,rivalCounts:{korea:korea.group.userData.buildingCount,yonsei:yonsei.group.userData.buildingCount}};
 }

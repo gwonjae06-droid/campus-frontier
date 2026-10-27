@@ -7,12 +7,12 @@ import {isUniversity,CAMPUS_COLORS,streetPlan,apartmentPlan,addUrbanCell,CITY_AS
 import {makeCampus} from './campus.js';
 
 assert.equal(DEFAULT_PITCH,56);
-assert.deepEqual([MIN_PITCH,MAX_PITCH],[50,62]);
+assert.deepEqual([MIN_PITCH,MAX_PITCH],[56,56]);
 assert.equal(clampPitch(-100),MIN_PITCH);
 assert.equal(clampPitch(200),MAX_PITCH);
 assert.ok(Math.abs(clampAngle(-100)-(DEFAULT_ANGLE-ANGLE_FREEDOM))<1e-10);
 assert.ok(Math.abs(clampAngle(100)-(DEFAULT_ANGLE+ANGLE_FREEDOM))<1e-10);
-assert.ok(ANGLE_FREEDOM*180/Math.PI<=8);
+assert.equal(ANGLE_FREEDOM,0);
 for(const aspect of [.5,.7,1,1.78,2.4]){
  const half=mapHalfSpan(SIZE,1.12,DEFAULT_PITCH,DEFAULT_ANGLE,aspect);
  const projectedSide=SIZE*1.12*Math.SQRT2/2;
@@ -68,10 +68,10 @@ for(const [school,file] of [['skku','skku-campus.json'],['yonsei','yonsei-sincho
 const board=readFileSync('board.js','utf8'),html=readFileSync('index.html','utf8'),css=readFileSync('modern-city-v16.css','utf8');
 assert.ok(board.includes('addUrbanCell(T,cell'));
 assert.ok(board.includes('mapHalfSpan(SIZE,1.12,pitch,angle,w/h)'));
-assert.ok(board.includes('clampAngle(down.a+dx*.0009)'));
-assert.ok(board.includes('pitch=clampPitch(down.p+dy*.035)'));
+assert.ok(board.includes('swipePan(down.startTarget,dx,dy,angle,pitch,worldPerPixel'));
+assert.ok(!board.includes('pitch=clampPitch(down.p+dy*.035)'));
 for(const color of ['#17c779','#ed5669','#66a9ee'])assert.ok(board.includes(color));
-for(const text of ['56°','min="50" max="62" value="56"','modern-city-v16.css'])assert.ok(html.includes(text));
+for(const text of ['modern-city-v16.css','fixed-isometric-v17.css'])assert.ok(html.includes(text));
 assert.ok(css.includes('background:#172934'));
 const s=initialState('standard');
 const result=resolveTurn(s,emptyPlan(),{}).state;
