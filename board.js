@@ -203,11 +203,65 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   function resetView(){pitch=DEFAULT_PITCH;angle=DEFAULT_ANGLE;setFocus(false);}
   function setFocus(value,school='skku'){focus=value;const center=school==='korea'?[16.5,16.5]:school==='yonsei'?[16.5,3.5]:[3.5,3.5];zoom=value?4.4:defaultZoom();target=value?new T.Vector3(coord(center[0]),.25,coord(center[1])):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
   function zoomBy(d){setZoom(zoom+d);}
-  async function animate(before,after,events,onPhase){
-    onPhase('이동');const moves=events.filter(e=>e.type==='move');const start=performance.now();await new Promise(resolve=>{function frame(now){const t=Math.min(1,(now-start)/650),ease=t*t*(3-2*t);for(const m of moves){const mesh=unitMeshes.get(m.id);if(mesh)mesh.position.set(T.MathUtils.lerp(coord(m.from.x),coord(m.to.x),ease),Math.sin(t*Math.PI)*.07,T.MathUtils.lerp(coord(m.from.z),coord(m.to.z),ease));}if(t<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame)});
-    onPhase('전투');const flashes=new T.Group();world.add(flashes);function pos(ref){if(ref.kind==='unit'){const u=after.units.find(u=>u.id===ref.id)??before.units.find(u=>u.id===ref.id);const mesh=unitMeshes.get(ref.id);return mesh?mesh.position.clone().add(new T.Vector3(0,.5,0)):u?new T.Vector3(coord(u.x),.5,coord(u.z)):null;}if(ref.kind==='structure'){const s=before.structures.find(s=>s.id===ref.id);return s?new T.Vector3(coord(s.x),.8,coord(s.z)):null;}const b=ref.team==='ally'?{x:4,z:4}:ref.team==='rival'?RIVAL_BASE:ENEMY_BASE;return new T.Vector3(coord(b.x),.6,coord(b.z));}
-    for(const e of events.filter(e=>e.type==='attack')){const a=pos(e.from),b=pos(e.target);if(a&&b){const l=new T.Line(new T.BufferGeometry().setFromPoints([a,b]),new T.LineBasicMaterial({color:'#e7ab3f'}));l.userData.ownMaterial=true;flashes.add(l);}}
-    await new Promise(resolve=>setTimeout(resolve,400));cleanup(flashes);onPhase('정산');await new Promise(resolve=>setTimeout(resolve,200));
+  async function animate(before,after,events,onPhase,options={}){
+    const skip=()=>!!options.shouldSkip?.();
+    const speed=()=>Math.max(1,options.getSpeed?.()??1);
+    const wait=duration=>new Promise(resolve=>{
+      let last=null,elapsed=0;
+      function frame(now){
+        if(skip())return resolve();
+        if(last!==null)elapsed+=(now-last)*speed();last=now;
+        if(elapsed>=duration)resolve();else requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    });
+    onPhase('이동');
+    const moves=events.filter(e=>e.type==='move');
+    await new Promise(resolve=>{
+      let last=null,progress=0;
+      function frame(now){
+        if(skip())return resolve();
+        if(last!==null)progress+=(now-last)*speed()/650;last=now;
+        const t=Math.min(1,progress),ease=t*t*(3-2*t);
+        for(const m of moves){
+          const mesh=unitMeshes.get(m.id);
+          if(mesh)mesh.position.set(
+            T.MathUtils.lerp(coord(m.from.x),coord(m.to.x),ease),
+            Math.sin(t*Math.PI)*.07,
+            T.MathUtils.lerp(coord(m.from.z),coord(m.to.z),ease));
+        }
+        if(t>=1)resolve();else requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    });
+    if(skip())return;
+    onPhase('전투');
+    const flashes=new T.Group();world.add(flashes);
+    function pos(ref){
+      if(ref.kind==='unit'){
+        const u=after.units.find(u=>u.id===ref.id)??before.units.find(u=>u.id===ref.id);
+        const mesh=unitMeshes.get(ref.id);
+        return mesh?mesh.position.clone().add(new T.Vector3(0,.5,0)):u?new T.Vector3(coord(u.x),.5,coord(u.z)):null;
+      }
+      if(ref.kind==='structure'){
+        const obj=before.structures.find(s=>s.id===ref.id);
+        return obj?new T.Vector3(coord(obj.x),.8,coord(obj.z)):null;
+      }
+      const b=ref.team==='ally'?{x:4,z:4}:ref.team==='rival'?RIVAL_BASE:ENEMY_BASE;
+      return new T.Vector3(coord(b.x),.6,coord(b.z));
+    }
+    try{
+      for(const e of events.filter(e=>e.type==='attack')){
+        const a=pos(e.from),b=pos(e.target);
+        if(a&&b){
+          const line=new T.Line(new T.BufferGeometry().setFromPoints([a,b]),new T.LineBasicMaterial({color:'#e7ab3f'}));
+          line.userData.ownMaterial=true;flashes.add(line);
+        }
+      }
+      await wait(400);
+    }finally{cleanup(flashes);}
+    if(skip())return;
+    onPhase('정산');await wait(200);
   }
   function render(){requestAnimationFrame(render);if(document.body.classList.contains('in-battle'))renderer.render(scene,camera)}render();
   return {sync,panBy,focusUnit,setFocus,setPitch,setZoom,resetView,zoomBy,animate,campusCount:campus.group.userData.buildingCount,rivalCounts:{korea:korea.group.userData.buildingCount,yonsei:yonsei.group.userData.buildingCount}};
