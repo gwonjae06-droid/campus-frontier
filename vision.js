@@ -1,4 +1,5 @@
-// Vision is derived from the current state; exploration is persisted separately.
+// Live enemy visibility differs from persistent map exploration.
+// Visited terrain never becomes hidden again; enemy units still require live line of sight.
 // In the older two-player practice mode every tile remains visible for legacy tests.
 export const TEAMS=['ally','enemy','rival'];
 export const tileKey=(x,z)=>`${x},${z}`;
@@ -38,10 +39,16 @@ export function rememberExploration(s){
  if(s.gameMode!=='standard')return;
  s.explored??={ally:[],enemy:[],rival:[]};
  s.lastSeen??={ally:{},enemy:{},rival:{}};
+ s.lastKnownPoints??={ally:{},enemy:{},rival:{}};
  for(const team of TEAMS){
   const visible=visibleTiles(s,team),remembered=new Set(s.explored[team]??[]);
   for(const k of visible)remembered.add(k);
   s.explored[team]=[...remembered].sort();
+  // A site's banner only reports ownership seen by that university.
+  // A change outside current sight must not leak current enemy control.
+  const known=s.lastKnownPoints[team]??={};
+  for(const [key,owner] of Object.entries(s.points??{}))
+   if(visible.has(key))known[key]=owner??null;
   const ghost=s.lastSeen[team]??={};
   for(const enemy of s.units)if(enemy.team!==team&&visible.has(tileKey(enemy.x,enemy.z)))
    ghost[enemy.id]={x:enemy.x,z:enemy.z,kind:enemy.kind,team:enemy.team,turn:s.turn};

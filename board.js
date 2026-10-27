@@ -1,12 +1,12 @@
 import {DEFAULT_PITCH,DEFAULT_ANGLE,orbitPosition,mapHalfSpan} from './camera.js?v=17';
 import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
-import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
+import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=18';
 import {makeCampus} from './campus.js?v=16';
 import {CAMPUS_PLOT_WIDTH} from './campus-scale.js?v=15';
 import {addUrbanCell,CAMPUS_COLORS} from './urban-city.js?v=16';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
-import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
+import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=18';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,swipePan} from './touch-gestures.js?v=17';
 export const coord=n=>(n-(SIZE-1)/2)*1.12;
 export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalData={}){
@@ -57,7 +57,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   function createUnit(u,parent){const g=new T.Group();g.position.set(coord(u.x),0,coord(u.z));const color=u.team==='ally'?'#276b51':u.team==='rival'?'#536fa8':'#b65c47';box(g,u.kind==='siege'?.48:.24,u.kind==='siege'?.22:.3,u.kind==='siege'?.34:.22,color,0,.24,0);if(u.kind==='cavalry')box(g,.38,.2,.54,'#9b7957',0,.19,0);if(u.kind==='siege'){box(g,.48,.07,.13,'#665e4b',0,.48,-.15);for(const x of [-.2,.2])cone(g,.1,.16,'#68593f',x,.11,.24,8);}box(g,.21,.19,.2,'#ead6af',0,.5,0);cone(g,.2,u.kind==='scout'?.28:.16,color,0,.67,0,4);box(g,.05,.35,.05,'#8d8971',.19,.36,0);box(g,.5,.045,.065,'#596a57',0,.84,0);box(g,.5*u.hp/stats(u).hp,.05,.07,u.team==='ally'?'#4dbb81':u.team==='rival'?'#9bbaff':'#ec9673',-.25+.25*u.hp/stats(u).hp,.846,0);g.userData.unitId=u.id;parent.add(g);return g;}
   function structure(s,parent,ghost=false){const g=new T.Group();g.position.set(coord(s.x),ghost?.04:0,coord(s.z));if(s.type==='wall'){box(g,.96,.48,.45,ghost?'#e6ca83':'#d8cfb4',0,.24,0);for(let i=-1;i<=1;i++)box(g,.2,.18,.48,'#e9dfc3',i*.34,.57,0);}else if(['recruit','scout','siege','cavalry'].includes(s.type)){const kind=s.type==='recruit'?'infantry':s.type;createUnit({id:'planned',team:'ally',kind,hp:stats({kind}).hp,x:0,z:0},g).position.set(0,0,0);}else{box(g,.54,.8,.54,ghost?'#e4c984':'#d9d1b8',0,.4,0);cone(g,.5,.4,'#396e54',0,1,0,4);flag(g,.2,1,.1,'#3ca572');}if(ghost)g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.6;o.userData.ownMaterial=true;}});parent.add(g);}
   function marker(parent,x,z,color,y=.025){const m=new T.Mesh(new T.BoxGeometry(1.02,.035,1.02),new T.MeshBasicMaterial({color,transparent:true,opacity:.45,depthWrite:false}));m.position.set(coord(x),y,coord(z));m.userData.ownMaterial=true;parent.add(m);}
-  function sync(state,plan,selected,mode){currentState=state;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||visible.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||visible.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
+  function sync(state,plan,selected,mode){currentState=state;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||explored.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||explored.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
     for(const [id,o] of Object.entries(plan.orders)){const u=state.units.find(u=>u.id===id);if(!u)continue;if(o.type!=='move')marker(preview,u.x,u.z,o.type==='attack'?'#e09569':'#8cbccc');if(o.type==='move'){marker(preview,o.x,o.z,'#e9b84e');const line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(coord(u.x),.16,coord(u.z)),new T.Vector3(coord(o.x),.16,coord(o.z))]),new T.LineBasicMaterial({color:'#bd8c2d'}));line.userData.ownMaterial=true;preview.add(line);}}
     const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move'){
  for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');
@@ -67,11 +67,13 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   if(t.kind==='base')for(const gate of t.team==='enemy'?[{x:14,z:17}]:[{x:17,z:6}])marker(preview,gate.x,gate.z,'#e77964');
  }
 }}
-    for(const d of DEPOSITS){const developed=state.developed[`${d.x},${d.z}`];box(dynamic,.45,developed?.25:.08,.45,developed?'#73a5ac':'#bd9f61',coord(d.x),developed?.13:.04,coord(d.z));}
+    for(const d of DEPOSITS){if(state.gameMode==='standard'&&!explored.has(tileKey(d.x,d.z)))continue;const developed=state.developed[`${d.x},${d.z}`];box(dynamic,.45,developed?.25:.08,.45,developed?'#73a5ac':'#bd9f61',coord(d.x),developed?.13:.04,coord(d.z));}
     for(const g of GATES)marker(preview,g.x,g.z,'#eac76c');
     for(const k of state.roads??[]){const [x,z]=k.split(',').map(Number);const m=new T.Mesh(new T.BoxGeometry(.83,.04,.26),mat('#cbb78c'));m.position.set(coord(x),.09,coord(z));dynamic.add(m);}
     if(state.grandConstruction||state.grandCompleted)flag(dynamic,coord(3)-.9,.3,coord(3)-.9,state.grandCompleted?'#e2b046':'#94a2ac');
-    for(const [k,owner] of Object.entries(state.points)){if(!owner||(state.gameMode==='standard'&&!visible.has(k)))continue;const [x,z]=k.split(',').map(Number);flag(dynamic,coord(x)+.25,.3,coord(z),owner==='ally'?'#2b8f63':owner==='rival'?'#4d75ad':'#bb6048');}
+    for(const [k,currentOwner] of Object.entries(state.points)){
+      const owner=state.gameMode==='standard'&&!visible.has(k)?state.lastKnownPoints?.ally?.[k]:currentOwner;
+      if(!owner||(state.gameMode==='standard'&&!explored.has(k)))continue;const [x,z]=k.split(',').map(Number);flag(dynamic,coord(x)+.25,.3,coord(z),owner==='ally'?'#2b8f63':owner==='rival'?'#4d75ad':'#bb6048');}
     if(state.gameMode==='standard'){
      const baseKnown=(x,z)=>{for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)if(explored.has(tileKey(x+dx,z+dz)))return true;return false;};
      // Capital silhouettes are known from the start; troops remain hidden by vision.
@@ -79,19 +81,21 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
      labels[1].visible=!focus;
      labels[2].visible=!focus;
      labels[3].visible=(explored.has('10,10')||visible.has('10,10'))&&!focus;
-     const regions=[[],[]];
+     // Only never-visited cells are fogged. Previously discovered terrain
+     // remains visible after troops depart; current enemy units are still
+     // filtered by visibleTiles above.
+     const undiscovered=[];
      for(let z=0;z<SIZE;z++)for(let x=0;x<SIZE;x++){
-      const k=tileKey(x,z);if(!visible.has(k)&&!['campus','enemy-base','rival-base'].includes(terrain(x,z)))regions[explored.has(k)?1:0].push({x,z});
+      const k=tileKey(x,z);
+      if(!explored.has(k)&&!['campus','enemy-base','rival-base'].includes(terrain(x,z)))
+       undiscovered.push({x,z});
      }
-     // Pitch-independent fog: conceal scenery and replace the cell with
-     // opaque terrain-level shading. No floating roofs or fragile alpha order.
-     for(let n=0;n<regions.length;n++){
-      if(!regions[n].length)continue;
+     if(undiscovered.length){
       const fog=new T.InstancedMesh(new T.BoxGeometry(1.108,.075,1.108),
-       new T.MeshBasicMaterial({color:n===0?'#344b57':'#91a4a1',depthWrite:true,transparent:false}),regions[n].length);
+       new T.MeshBasicMaterial({color:'#344b57',depthWrite:true,transparent:false}),undiscovered.length);
       fog.frustumCulled=false;
       const helper=new T.Object3D();
-      regions[n].forEach(({x,z},i)=>{helper.position.set(coord(x),.025,coord(z));helper.updateMatrix();fog.setMatrixAt(i,helper.matrix);});
+      undiscovered.forEach(({x,z},i)=>{helper.position.set(coord(x),.025,coord(z));helper.updateMatrix();fog.setMatrixAt(i,helper.matrix);});
       fog.instanceMatrix.needsUpdate=true;fog.userData.ownMaterial=true;dynamic.add(fog);
      }
     }else{tent.visible=true;rivalCampus.visible=true;}

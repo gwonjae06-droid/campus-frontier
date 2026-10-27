@@ -30,7 +30,7 @@ const board=readFileSync('board.js','utf8');
 assert.ok(board.includes("makeCampus(rivalData.korea,'korea')"));
 assert.ok(board.includes("makeCampus(rivalData.yonsei,'yonsei')"));
 assert.ok(board.includes('fog.frustumCulled=false'));
-assert.ok(board.includes("g.visible=state.gameMode!=='standard'||visible.has(k)"));
+assert.ok(board.includes("g.visible=state.gameMode!=='standard'||explored.has(k)"));
 assert.ok(board.includes('transparent:false'));
 assert.ok(board.includes('makeRivalCampus'));
 assert.ok(!board.includes('BoxGeometry(1.107,9.4,1.107)'));

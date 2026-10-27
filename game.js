@@ -1,13 +1,15 @@
 import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=10';
-import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints,GATES,targets} from './simulation.js?v=10';
-import {createBoard} from './board.js?v=17';
-import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
+import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints,GATES,targets} from './simulation.js?v=18';
+import {createBoard} from './board.js?v=18';
+import {visibleTiles,exploredTiles,tileKey,rememberExploration} from './vision.js?v=18';
 import {isCeasefire,canProposeCeasefire,aiAcceptsCeasefire,ceasefireUntil} from './diplomacy.js?v=10';
 const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v13';
 let state=initialState('standard'),plan=emptyPlan(),selected=null,mode='move',busy=false,focused=false,board,committedEnemy;
 state.version=13;
 let storageAvailable=true;
 try {const saved=JSON.parse(localStorage.getItem(SAVE));if(saved?.state?.version===13&&Number.isInteger(saved.state.turn)&&Array.isArray(saved.state.units)&&Array.isArray(saved.state.structures)&&saved.plan?.builds&&saved.plan?.orders){state=saved.state;plan=saved.plan;}}catch{storageAvailable=false;}
+// Reconcile older v13 saves with permanent exploration and remembered banners.
+rememberExploration(state);
 committedEnemy=enemyOrders(state);
 // HUD panels are independent from saved match state and never alter the turn engine.
 const compactScreen=window.matchMedia('(max-width:760px)');
@@ -31,7 +33,7 @@ function refresh(){
  $('#gold').textContent=availableGold(state,plan);$('#gold').title=`보유 ${state.gold} / 예약 ${state.gold-availableGold(state,plan)}`;$('#health').textContent=state.homeHP;$('#turn').textContent=`${Math.min(state.turn,TURN_LIMIT)}/${TURN_LIMIT}`;$('#scoreBoard').textContent=`성균관대학교 ${victoryPoints(state,'ally')} / 고려대학교 ${victoryPoints(state,'enemy')} / 연세대학교 ${victoryPoints(state,'rival')}`;$('#rpHud').textContent=researchRate(state);$('#scoreHud').textContent=`${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')}:${victoryPoints(state,'rival')}`;document.body.classList.toggle('unit-selected',!!selected&&!busy&&!state.result);$('#enemyHP').textContent=`${state.enemyHP} / 30`;$('#enemyBar').value=state.enemyHP;const sight=visibleTiles(state,'ally'),seen=exploredTiles(state,'ally');
  const knownBase=(x,z)=>{for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)if(seen.has(tileKey(x+dx,z+dz)))return true;return false;};
  $('#enemyHP').textContent=knownBase(17,17)?`${state.enemyHP} / 30`:'미발견';$('#rivalHP').textContent=knownBase(17,3)?`${state.rivalHP} / 30`:'미발견';$('#rivalBar').value=state.rivalHP;
- $('#fogStatus').textContent=`탐색 ${seen.size}/441`;
+ $('#fogStatus').textContent=`발견 ${seen.size}/441`;
  const count=Object.keys(plan.orders).length+plan.builds.length+(plan.projects??[]).length+(Object.hasOwn(plan,'research')?1:0)+(plan.scholarshipTech?1:0)+(plan.diplomacy?1:0);$('#orderCount').textContent=count;$('#mobilePlan').textContent=`예약 ${count}개`;$('#mobilePlan').disabled=busy;$('#mobileClear').disabled=busy||!count;$('#clearPlan').disabled=busy||!count;
  $('#resolve').disabled=busy||!!state.result||!board;$('#resolve').textContent=state.result?(state.victoryMode==='score'?({victory:'점수 승리',defeat:'점수 패배',draw:'점수 무승부'})[state.result]:({victory:'전초기지 점령 · 승리',defeat:'본진 함락',draw:'양쪽 본진 함락'})[state.result]):busy?'전투 중…':`턴 종료 →`;
  $('#turnHint').textContent=state.result?'새 연습을 시작해 다른 전략을 시도하세요.':`예약 ${state.gold-availableGold(state,plan)} OP · 명령 ${count}개 · 점수 ${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')}:${victoryPoints(state,'rival')} · 수입 +${income(state)} OP/턴`;
@@ -75,9 +77,14 @@ function simpleAttack(u,target){
 function pick(hit){
  if(hit.building){const b=hit.building,name=b.n??`이름 미등록 건물 ${b.index+1}`;selection(name,`지도 데이터 기준 ${b.lv??'미상'}층 · 높이 ${b.h}m. 전체 캠퍼스와 같은 비율로 축소했습니다.`);toast(`${name} · ${b.lv??'미상'}층 / ${b.h}m`);return;}
  const {x,z}=hit;if(busy)return;
- if(state.gameMode==='standard'&&!visibleTiles(state,'ally').has(tileKey(x,z))){const seen=exploredTiles(state,'ally').has(tileKey(x,z));selection(seen?'현재 시야 밖':'미탐색 지역',seen?'이전에 발견한 지역입니다. 부대가 다시 확인할 때까지 적의 현재 상태는 알 수 없습니다.':'정찰대 또는 다른 부대로 시야를 확보하세요.');return;}
+ const currentSight=visibleTiles(state,'ally').has(tileKey(x,z));
+  const discovered=exploredTiles(state,'ally').has(tileKey(x,z));
+  if(state.gameMode==='standard'&&!discovered&&!currentSight){
+   selection('미탐색 지역','정찰대 또는 다른 부대로 지역을 탐험하면 지형이 영구히 밝혀집니다.');
+   return;
+  }
  if(isCampus(x,z)){selection('성균관대학교 인문사회과학캠퍼스 · 4×4 본진','데이터에 포함된 56개 건물을 모두 배치했습니다. 캠퍼스 확대에서 건물을 확인하세요.');setFocus(true);return;}
- const unit=state.units.find(u=>u.x===x&&u.z===z),structure=state.structures.find(s=>s.x===x&&s.z===z);
+ const unit=state.units.find(u=>u.x===x&&u.z===z&&(u.team==='ally'||currentSight)),structure=state.structures.find(s=>s.x===x&&s.z===z);
  if(state.gameMode==='standard'&&mode==='move'&&selected&&!state.result){
   const own=state.units.find(u=>u.id===selected&&u.team==='ally');
   if(own&&unit&&unit.team!=='ally'&&simpleAttack(own,{kind:'unit',id:unit.id}))return;
@@ -93,7 +100,7 @@ function pick(hit){
  if(mode==='attack'&&selected){const target=unit?{kind:'unit',id:unit.id}:structure?{kind:'structure',id:structure.id}:terrain(x,z)==='enemy-base'?{kind:'base',team:'enemy'}:terrain(x,z)==='rival-base'?{kind:'base',team:'rival'}:null;const u=state.units.find(u=>u.id===selected),order={type:'attack',target},error=canOrder(state,u,order);if(error){toast(error);return;}plan.orders[selected]=order;save();refresh();toast('공격 예약 완료 · 대상이 사거리를 벗어나면 실패합니다.');return;}
  if(unit){selection(unitName(unit),`체력 ${unit.hp}/${stats(unit).hp} · ${x+1}, ${z+1} 구역. ${unit.team==='ally'?'인접한 빈 타일을 눌러 이동 예약.':'다음 행동은 턴이 실행될 때 공개됩니다.'}`);if(unit.team==='ally'&&mode==='move'){selected=unit.id;refresh();toast('초록 타일을 눌러 이동, 보이는 적을 눌러 공격하세요.');}else toast(`${unitName(unit)} · 체력 ${unit.hp}/${stats(unit).hp}`);return;}
  if(mode==='move'&&selected){const u=state.units.find(u=>u.id===selected);const error=canMove(state,u,x,z,plan);if(error){toast(error);return;}if(Object.entries(plan.orders).some(([id,o])=>id!==selected&&o.type==='move'&&o.x===x&&o.z===z)){toast('다른 아군 부대가 이 칸으로 이동을 예약했습니다.');return;}plan.orders[selected]={type:'move',x,z};save();refresh();toast(`${stats(u).name} 이동 예약 · 거점에 도착하면 자동 점령합니다.`);return;}
- const site=keyForSite(x,z);if(Object.hasOwn(state.points,site)){const owner=state.points[site];selection(site===CENTRAL_POINT?'★ 중앙 주요 거점':'일반 거점',`${owner==='ally'?'성균관대 소유':owner==='enemy'?'고려대 소유':owner==='rival'?'연세대 소유':'중립'} · ${site===CENTRAL_POINT?5:3}점 · 정상 거점 수입 +2 OP/턴. 점령은 거점 위 부대가 다음 턴에 명령을 예약해야 합니다.`);return;}
+ const site=keyForSite(x,z);if(Object.hasOwn(state.points,site)){const owner=currentSight?state.points[site]:state.lastKnownPoints?.ally?.[site];selection(site===CENTRAL_POINT?'★ 중앙 주요 거점':'일반 거점',`${owner==='ally'?'성균관대 소유':owner==='enemy'?'고려대 소유':owner==='rival'?'연세대 소유' :owner==null?'마지막 발견 당시 중립':'소유 정보 없음'}${!currentSight?' (마지막 확인)':''} · ${site===CENTRAL_POINT?5:3}점 · 정상 거점 수입 +2 OP/턴. 점령은 거점 위 부대가 다음 턴에 명령을 예약해야 합니다.`);return;}
   const deposit=DEPOSITS.find(d=>d.x===x&&d.z===z);if(deposit){selection('개발 자원',state.developed[`${x},${z}`]?'개발 완료 · 소유 작업장이 정상 상태일 때 OP +1/턴.':'연구와 거점 관리에서 자원 개발 연구 후 3 OP로 개발합니다. 부대는 이 타일을 통과할 수 있습니다.');return;}
  const type=terrain(x,z);selection(structure?names[structure.type]:type==='resource'?'자원 거점':type==='enemy-base'?'AI 전초기지':`${x+1}, ${z+1} 구역`,structure?`내구도 ${structure.hp}. ${structure.type==='tower'?'사거리 2칸, 공격 3. 2턴 건설, 완공 다음 턴부터 공격.':'적의 이동을 막습니다.'}`:type==='resource'?'거점에 도착한 다음 턴에 점령 명령을 내리세요. 정상 거점은 OP +2. 적 거점은 한 턴 안정화합니다.':type==='enemy-base'?'인접한 아군의 공격을 예약하세요. 이동 후 자동 공격하지 않습니다.':'부대를 선택하거나 건설 도구를 선택하세요.');
 }

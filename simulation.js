@@ -1,5 +1,5 @@
 import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,finishLabs,finishGrand,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=10';
-import {visibleTiles,isVisible,rememberExploration} from './vision.js?v=10';
+import {visibleTiles,isVisible,rememberExploration} from './vision.js?v=18';
 import {isCeasefire,violatesCeasefire,canProposeCeasefire,resolveDiplomacy} from './diplomacy.js?v=10';
 // Deterministic public-vision practice rules. Rendering never changes outcomes.
 export const SIZE=21, TURN_LIMIT=30, CENTRAL_POINT='10,10';
