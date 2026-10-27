@@ -1,0 +1,32 @@
+/* v1.6 — saturated modern city palette & a quiet isometric game HUD. */
+:root{color:#e5f0e8;background:#172934}
+html,body{background:#172934}
+body::after{opacity:.12!important}
+header{background:rgba(19,38,48,.92)!important;border-bottom:1px solid rgba(145,188,179,.22)!important;color:#effaf1!important;box-shadow:0 8px 28px rgba(4,20,30,.17)}
+header .brand{color:#eafff5!important}
+header .emblem{background:#207850!important;color:#f7ffeb}
+header .resources{background:rgba(38,67,77,.94)!important;color:#ddf0e7;border:1px solid rgba(135,186,186,.25)}
+header .resources b{color:#fffdf0}
+header .header-research,header #panelToggle,header #help{background:#2a5158!important;color:#f5fbec!important;border:1px solid rgba(141,201,174,.35)!important}
+#game{background:#172934}
+.map-top{background:rgba(23,47,59,.85)!important;color:#f2f9ed!important;border:1px solid rgba(151,209,187,.28)!important;backdrop-filter:blur(10px)}
+.map-top small{color:#b6d5d0!important}
+.view-controls>.zoom-shortcut{background:#1f5660!important;color:#eafff5!important;border:1px solid #568e97!important}
+.view-controls>.view-panel{background:rgba(26,54,63,.92)!important;color:#f0f6e7!important;border-color:rgba(134,190,181,.40)!important}
+.view-panel .pitch-control{background:rgba(39,82,82,.92)!important}
+.view-panel .pitch-control span,.view-panel .pitch-control output{color:#d9f6e7!important}
+.view-panel .pitch-control input{accent-color:#70d8a5}
+.bottom{background:rgba(17,42,53,.90)!important;color:#eff8ed!important;border:1px solid rgba(120,188,162,.35)!important;
+box-shadow:0 14px 30px rgba(3,19,27,.32)!important;backdrop-filter:blur(14px)}
+.bottom .tools .simple-tool{background:#305861!important;color:#f0faf3!important;border:1px solid #477e80!important}
+.bottom .tools .simple-tool:hover:not(:disabled){background:#376d6a!important}
+.bottom .turn-action>.primary{background:#168664!important;color:#faffef!important}
+.bottom .turn-action>.primary:hover:not(:disabled){background:#0aa070!important}
+#toast{background:rgba(18,43,49,.94)!important;color:#e9f7e9!important;border:1px solid rgba(137,206,168,.5)!important}
+footer{color:#a1c5c1!important}
+aside{background:rgba(245,250,242,.97)!important}
+@media(max-width:760px){
+ header{background:rgba(15,39,48,.96)!important}
+ .view-controls{top:113px!important}
+ .bottom{background:rgba(15,39,47,.94)!important}
+}

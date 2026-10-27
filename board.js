@@ -1,18 +1,19 @@
-import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=15';
+import {DEFAULT_PITCH,DEFAULT_ANGLE,clampPitch,clampAngle,orbitPosition,mapHalfSpan} from './camera.js?v=16';
 import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
 import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
-import {makeCampus} from './campus.js?v=15';
+import {makeCampus} from './campus.js?v=16';
 import {CAMPUS_PLOT_WIDTH} from './campus-scale.js?v=15';
+import {addUrbanCell,CAMPUS_COLORS} from './urban-city.js?v=16';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
 export const coord=n=>(n-(SIZE-1)/2)*1.12;
 export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalData={}){
-  const scene=new T.Scene();scene.background=new T.Color('#e9eee4');const world=new T.Group();scene.add(world);
-  const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,matchMedia('(max-width:760px)').matches?1.5:2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;container.append(renderer.domElement);
-  const camera=new T.OrthographicCamera(-15,15,15,-15,.01,150),materials=new Map(),tilePicks=[];let pitch=DEFAULT_PITCH,angle=Math.PI/4,zoom=1,focus=false,target=new T.Vector3(),w=1,h=1;
-  scene.add(new T.HemisphereLight(0xffffff,0x829276,2));const sun=new T.DirectionalLight(0xfff2d8,2.8);sun.position.set(-12,26,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:70});sun.shadow.normalBias=.015;scene.add(sun);
+  const scene=new T.Scene();scene.background=new T.Color('#1a2934');const world=new T.Group();scene.add(world);
+  const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,matchMedia('(max-width:760px)').matches?1.5:2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;container.append(renderer.domElement);
+  const camera=new T.OrthographicCamera(-15,15,15,-15,.01,150),materials=new Map(),tilePicks=[];let pitch=DEFAULT_PITCH,angle=DEFAULT_ANGLE,zoom=1.08,focus=false,target=new T.Vector3(),w=1,h=1;
+  scene.add(new T.HemisphereLight(0xffffff,0x566f65,1.75));const sun=new T.DirectionalLight(0xfff2d8,2.8);sun.position.set(-12,27,11);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:70});sun.shadow.normalBias=.015;scene.add(sun);
   function mat(c){if(!materials.has(c))materials.set(c,new T.MeshStandardMaterial({color:c,roughness:.85}));return materials.get(c);}
   function box(parent,w,h,d,color,x,y,z){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),mat(color));mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
   function cone(parent,r,h,color,x,y,z,n=5){const mesh=new T.Mesh(new T.ConeGeometry(r,h,n),mat(color));mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh;}
@@ -20,14 +21,16 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   const groundTiles=new Map();
   for(let z=0;z<SIZE;z++)for(let x=0;x<SIZE;x++){
     const cell=new T.Group();groundTiles.set(tileKey(x,z),cell);world.add(cell);
-    const type=terrain(x,z),water=type==='water',color=water?'#65b4bf':isCampus(x,z)?'#5c9672':type==='resource'?'#d6bb76':(x+z)%3===0?'#abc587':'#b5cc91';
+    const type=terrain(x,z),water=type==='water';
+    const color=CAMPUS_COLORS[type]??(water?'#1a80b8':type==='resource'?'#e4ac35':type==='forest'?'#366c4e':type==='hill'?'#637e69':(x+z)%3===0?'#639e69':'#72a875');
     const tile=box(cell,1.095,.3,1.095,color,coord(x),-.15,coord(z));tile.userData.tile={x,z,type};tilePicks.push(tile);
-    if(type==='hill')cone(cell,.53,.68,'#9dae97',coord(x),.38,coord(z),5);
-    if(type==='forest'){box(cell,.07,.4,.07,'#887357',coord(x),.2,coord(z));cone(cell,.3,.7,'#427351',coord(x),.7,coord(z));}
-    if(type==='water')box(cell,.33,.012,.025,'#a9d9d7',coord(x),.015,coord(z));
-    if(type==='resource'){const central=x===10&&z===10;box(cell,central?.94:.58,.2,central?.94:.58,central?'#e9c46e':'#e6d39c',coord(x),.1,coord(z));cone(cell,central?.33:.21,central?.68:.42,central?'#bd8438':'#be9850',coord(x),central?.55:.4,coord(z),central?6:4);}
+    if(type==='hill')cone(cell,.53,.68,'#697b7c',coord(x),.38,coord(z),5);
+    if(type==='forest'){box(cell,.07,.4,.07,'#765c40',coord(x),.2,coord(z));cone(cell,.3,.7,'#285d42',coord(x),.7,coord(z));}
+    if(type==='water')box(cell,.33,.012,.025,'#8cdbea',coord(x),.015,coord(z));
+    if(type==='resource'){const central=x===10&&z===10;box(cell,central?.94:.58,.2,central?.94:.58,central?'#f2c252':'#deb56a',coord(x),.1,coord(z));cone(cell,central?.33:.21,central?.68:.42,central?'#b37b2e':'#a57b37',coord(x),central?.55:.4,coord(z),central?6:4);}
+    addUrbanCell(T,cell,x,z,type,coord(x),coord(z),box,mat);
   }
-  const campus=makeCampus(data);campus.group.position.set(coord(3.5),0,coord(3.5));world.add(campus.group);
+  const campus=makeCampus(data,'skku');campus.group.position.set(coord(3.5),0,coord(3.5));world.add(campus.group);
   // These are *plot* boundaries, not bases: all three plots are exactly
   // 4×4 tiles while every building's X/Z ratio stays uniform inside.
   function campusBorder(gridX,gridZ,color){
@@ -38,15 +41,15 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
       new T.LineBasicMaterial({color,linewidth:2,depthTest:true}));
     world.add(outline);return outline;
   }
-  campusBorder(3.5,3.5,'#e4be65');
+  campusBorder(3.5,3.5,'#17c779');
   flag(world,coord(4)+.42,.25,coord(4)+.42,'#24855f');
-  const korea=rivalData.korea?.buildings?.length?makeCampus(rivalData.korea):makeRivalCampus('korea'),yonsei=rivalData.yonsei?.buildings?.length?makeCampus(rivalData.yonsei):makeRivalCampus('yonsei');
+  const korea=rivalData.korea?.buildings?.length?makeCampus(rivalData.korea,'korea'):makeRivalCampus('korea'),yonsei=rivalData.yonsei?.buildings?.length?makeCampus(rivalData.yonsei,'yonsei'):makeRivalCampus('yonsei');
   const tent=korea.group,rivalCampus=yonsei.group;
   tent.position.set(coord(16.5),0,coord(16.5));rivalCampus.position.set(coord(16.5),0,coord(3.5));
   world.add(tent,rivalCampus);
-  campusBorder(16.5,16.5,'#cc826f');
-  campusBorder(16.5,3.5,'#7399d5');
-  box(world,SIZE*1.14,.14,SIZE*1.14,'#d1dacb',0,-.4,0);
+  campusBorder(16.5,16.5,'#ed5669');
+  campusBorder(16.5,3.5,'#66a9ee');
+  box(world,SIZE*1.14,.14,SIZE*1.14,'#2a4e56',0,-.4,0);
   function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58,488);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(3.65,.642,1);world.add(s);return s;}
   const labels=[label('성균관대학교 인문사회과학캠퍼스',coord(3.5),1.5,coord(2),'#285e46'),label('고려대학교 안암캠퍼스',coord(16.5),1.5,coord(17),'#a9624c'),label('연세대학교 신촌캠퍼스',coord(16.5),1.5,coord(3),'#506d9d'),label('중앙 거점 · 5점',coord(10),1.65,coord(10),'#a6782a')];
   let dynamic=new T.Group(),preview=new T.Group();world.add(dynamic,preview);let unitMeshes=new Map(),currentState=null;
@@ -93,7 +96,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
      }
     }else{tent.visible=true;rivalCampus.visible=true;}
   }
-  function resize(){const rect=container.getBoundingClientRect();w=rect.width;h=rect.height;renderer.setSize(w,h);const span=Math.max(14.2,19.5*Math.sin(pitch*Math.PI/180),19/(w/h));camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.zoom=zoom;const pos=orbitPosition(angle,pitch,target);camera.position.set(pos.x,pos.y,pos.z);camera.lookAt(target);camera.updateProjectionMatrix();onViewChange?.(pitch,zoom);}new ResizeObserver(resize).observe(container);resize();
+  function resize(){const rect=container.getBoundingClientRect();w=Math.max(1,rect.width);h=Math.max(1,rect.height);renderer.setSize(w,h);const span=mapHalfSpan(SIZE,1.12,pitch,angle,w/h);camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.zoom=zoom;const pos=orbitPosition(angle,pitch,target);camera.position.set(pos.x,pos.y,pos.z);camera.lookAt(target);camera.updateProjectionMatrix();onViewChange?.(pitch,zoom);}new ResizeObserver(resize).observe(container);resize();
   const ray=new T.Raycaster(),pointer=new T.Vector2();function pick(e){const r=container.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);if(focus){const building=ray.intersectObjects(campus.picks)[0];if(building)return {building:building.object.userData.building};}const hit=ray.intersectObjects(tilePicks)[0];return hit?.object.userData.tile;}
   const canvas=renderer.domElement;canvas.style.touchAction='none';
   const pointers=new Map();let down=null,gesture=null,gestureEnded=false;
@@ -105,7 +108,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     gesture={...m,startZoom:zoom,startTarget:target.clone(),angle};down=null;gestureEnded=true;
   }
   function panFromGesture(m){
-    const pixelWorld=(2*Math.max(14.2,19.5*Math.sin(pitch*Math.PI/180),19/(w/h)))/(Math.max(h,1)*gesture.startZoom);
+    const pixelWorld=(2*mapHalfSpan(SIZE,1.12,pitch,gesture.angle,w/h))/(Math.max(h,1)*gesture.startZoom);
     const shift=groundPan(m.x-gesture.x,m.y-gesture.y,gesture.angle,pixelWorld);
     const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
     target.x=T.MathUtils.clamp(gesture.startTarget.x+shift.x,lower,upper);
@@ -129,7 +132,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     if(gesture||!down||e.pointerId!==down.id)return;
     const dx=e.clientX-down.x,dy=e.clientY-down.y;
     if(Math.hypot(dx,dy)>7)down.moved=true;
-    if(down.moved){angle=down.a+dx*.006;pitch=clampPitch(down.p+dy*.18);resize();}
+    if(down.moved){angle=clampAngle(down.a+dx*.0009);pitch=clampPitch(down.p+dy*.035);resize();}
   },{passive:false});
   function finishPointer(e,canceled=false){
     if(!pointers.has(e.pointerId))return;
@@ -147,9 +150,9 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   canvas.addEventListener('lostpointercapture',e=>{pointers.delete(e.pointerId);if(!pointers.size){gesture=null;gestureEnded=false;down=null;}});
   canvas.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom-e.deltaY*.0018)},{passive:false});
   function setPitch(value){pitch=clampPitch(value);resize();}
-  function resetView(){pitch=DEFAULT_PITCH;angle=Math.PI/4;setFocus(false);}
-  function setFocus(value){focus=value;zoom=value?4.4:1;target=value?new T.Vector3(coord(3.5),.25,coord(3.5)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
-  function rotate(d){angle+=d*Math.PI/2;resize();}
+  function resetView(){pitch=DEFAULT_PITCH;angle=DEFAULT_ANGLE;setFocus(false);}
+  function setFocus(value){focus=value;zoom=value?4.4:1.08;target=value?new T.Vector3(coord(3.5),.25,coord(3.5)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
+  function rotate(d){angle=clampAngle(angle+d*Math.PI/36);resize();}
   function zoomBy(d){setZoom(zoom+d);}
   async function animate(before,after,events,onPhase){
     onPhase('이동');const moves=events.filter(e=>e.type==='move');const start=performance.now();await new Promise(resolve=>{function frame(now){const t=Math.min(1,(now-start)/650),ease=t*t*(3-2*t);for(const m of moves){const mesh=unitMeshes.get(m.id);if(mesh)mesh.position.set(T.MathUtils.lerp(coord(m.from.x),coord(m.to.x),ease),Math.sin(t*Math.PI)*.07,T.MathUtils.lerp(coord(m.from.z),coord(m.to.z),ease));}if(t<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame)});

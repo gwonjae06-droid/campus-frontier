@@ -26,5 +26,5 @@ const eco=next(spec,{...emptyPlan(),projects:[{site:'8,6',type:'economy'}]});ass
 const defended=initialState();defended.research.ally.done=['training'];defended.units=[{id:'a1',team:'ally',kind:'scout',x:6,z:6,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:7,z:6,hp:10}];
 const hit=resolveTurn(defended,{...emptyPlan(),orders:{a1:{type:'guard'}}},{e1:{type:'attack',target:{kind:'unit',id:'a1'}}}).state;assert.equal(hit.units[0].hp,6);
 assert.deepEqual(next(JSON.parse(JSON.stringify(spec)),JSON.parse(JSON.stringify(sp))),next(spec,sp));
-for(const pitch of [-100,25,46,75,200,NaN]){const p=orbitPosition(Math.PI/4,pitch);assert.ok(Object.values(p).every(Number.isFinite));assert.ok(Math.abs(Math.hypot(p.x,p.y,p.z)-38)<1e-8);assert.ok(p.y>0);}assert.equal(clampPitch(-100),18);assert.equal(clampPitch(200),80);
+for(const pitch of [-100,25,46,75,200,NaN]){const p=orbitPosition(Math.PI/4,pitch);assert.ok(Object.values(p).every(Number.isFinite));assert.ok(Math.abs(Math.hypot(p.x,p.y,p.z)-38)<1e-8);assert.ok(p.y>0);}assert.equal(clampPitch(-100),50);assert.equal(clampPitch(200),62);
 console.log('PASS: research unlock timing, banking, switching, snapshot RP, development income, specialization, contested refunds, training, saved growth, camera bounds');

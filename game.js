@@ -1,6 +1,6 @@
 import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=10';
 import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints,GATES,targets} from './simulation.js?v=10';
-import {createBoard} from './board.js?v=15';
+import {createBoard} from './board.js?v=16';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
 import {isCeasefire,canProposeCeasefire,aiAcceptsCeasefire,ceasefireUntil} from './diplomacy.js?v=10';
 const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v13';
@@ -109,7 +109,7 @@ async function execute(){if(busy||state.result)return;busy=true;selected=null;re
  $('#creditsOpen').onclick=()=>$('#creditsDialog').showModal();
  $('#game').addEventListener('pointerdown',()=>{if(compactScreen.matches&&document.body.classList.contains('panel-open'))toggleHudPanel('panel-open',$('#panelToggle'),false);});
  compactScreen.addEventListener('change',()=>toggleHudPanel('panel-open',$('#panelToggle'),!compactScreen.matches));
- $('#pitchLow').onclick=()=>board?.setPitch(22);$('#pitchHigh').onclick=()=>board?.setPitch(72);
+ $('#pitchLow').onclick=()=>board?.setPitch(50);$('#pitchHigh').onclick=()=>board?.setPitch(62);
   $('#zoomRange').oninput=e=>board?.setZoom(Number(e.target.value));
   $('#rotateLeft').onclick=()=>board?.rotate(-1);$('#rotateRight').onclick=()=>board?.rotate(1);$('#zoomIn').onclick=()=>board?.zoomBy(.65);$('#zoomOut').onclick=()=>board?.zoomBy(-.65);
  $('#pitch').oninput=e=>board?.setPitch(Number(e.target.value));$('#resetView').onclick=()=>{setFocus(false);board?.resetView();};
