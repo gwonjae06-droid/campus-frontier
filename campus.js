@@ -1,5 +1,5 @@
 import * as T from './vendor/three.module.js';
-import {campusTransform,CAMPUS_MODEL_WIDTH,visibleBuildingHeight} from './campus-scale.js?v=14';
+import {campusTransform,CAMPUS_MODEL_WIDTH,visibleBuildingHeight} from './campus-scale.js?v=15';
 
 export function makeCampus(data) {
   const group=new T.Group(),picks=[];

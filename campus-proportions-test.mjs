@@ -50,8 +50,8 @@ for(const fn of ['campusBorder(3.5,3.5','campusBorder(16.5,16.5','campusBorder(1
 assert.ok(board.includes('CAMPUS_PLOT_WIDTH/2-.065'));
 assert.ok(board.includes('s.scale.set(3.65,.642,1)'),'label aspect ratio must not be stretched');
 assert.ok(Math.abs(3.65/.642-512/90)<.02);
-assert.ok(html.includes('game.js?v=proportions-v14'));
+assert.ok(html.includes('game.js?v=proportions-v15'));
 assert.ok(html.includes('id="pitchValue">61°'));
-assert.ok(game.includes("board.js?v=14"));
-assert.ok(board.includes('campus.js?v=14')&&board.includes('camera.js?v=14'));
+assert.ok(game.includes("board.js?v=15"));
+assert.ok(board.includes('campus.js?v=15')&&board.includes('camera.js?v=15'));
 console.log('PASS: camera angle, label proportions, no independent XZ stretching, uniform 4×4 frames');
