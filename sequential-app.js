@@ -4,8 +4,9 @@ import {createSequentialGame,applySequentialAction,endSequentialRound,UNIVERSITY
 import {createBoard} from './board.js?v=41';
 import {emptyPlan,reachable,targets,stats,terrain,key,TURN_LIMIT} from './simulation.js?v=18';
 import {visibleTiles,exploredTiles} from './vision.js?v=18';
+import {createResearchPanel} from './research-panel.js?v=5';
 const $=s=>document.querySelector(s),SAVE='campus-frontier-sequential-v4';
-let state=null,board=null,selected=null,city=null,busy=false;
+let state=null,board=null,selected=null,city=null,busy=false,researchPanel=null;
 function previous(){
  try{const v=JSON.parse(localStorage.getItem(SAVE));return v?.version===14&&v.ruleset==='sequential'&&TEAMS.includes(v.playerTeam)?v:null;}catch{return null;}
 }
@@ -85,19 +86,7 @@ function choose(hit){
  }
  selected=null;city=null;hud();
 }
-function research(){
- const root=$('#seqTechOptions');root.replaceChildren();
- for(const [branch,details] of Object.entries(BRANCHES)){
-  const l=level(state,state.playerTeam,branch),cost=technologyCost(state,state.playerTeam,branch);
-  const b=document.createElement('button');b.className='seq-tech-card';
-  const title=document.createElement('strong');title.textContent=details.name+` · Lv.${l}/3`;
-  const detail=document.createElement('small');detail.textContent=cost==null?'최고 단계 · 완료':`${details.steps[l]} · ${cost} OP`;
-  b.append(title,detail);b.disabled=busy||cost==null||state[UNIVERSITY[state.playerTeam].bank]<cost;
-  b.onclick=()=>{if(transact({type:'research',branch})){$('#seqResearch').close();}};
-  root.append(b);
- }
- $('#seqResearch').showModal();
-}
+function research(){researchPanel?.open();}
 async function finish(){
  if(busy||state.result)return;
  busy=true;hud();
@@ -131,16 +120,33 @@ async function initialize(team){
    <button id="seqGuard" hidden>▣ 휴식</button>
    <button id="seqEnd" class="main-action">내 턴 종료</button>
   </nav>
-  <dialog id="seqResearch"><h2>기술 연구 · 한 가지 방향을 성장시키세요</h2><p>연구 비용도 OP로 지불합니다. 복잡한 별도 연구 자원은 없습니다.</p><div id="seqTechOptions"></div><button id="seqCloseTech">전장으로</button></dialog>
+  <dialog id="seqResearch" aria-labelledby="seqResearchTitle">
+   <div class="seq-research-shell">
+    <header class="seq-research-header">
+     <div><span class="seq-research-kicker">CAMPUS FRONTIER / ACADEMY</span><h2 id="seqResearchTitle">기술 연구</h2><p>한 가지 선택이 다음 라운드의 전략을 바꿉니다.</p></div>
+     <button id="seqCloseTech" type="button" aria-label="연구창 닫기">✕ <span>닫기</span></button>
+    </header>
+    <div class="seq-research-main">
+     <section class="seq-research-tree" aria-label="네 계열 연구 기술 트리">
+      <div class="seq-research-section-head"><h3>연구 계열</h3><span>4 계열 · 각 3단계</span></div>
+      <div id="seqTechOptions" class="seq-research-branches"></div>
+      <p class="seq-research-tree-note">기술을 눌러 효과 확인 · 연결된 순서대로 연구</p>
+     </section>
+     <section class="seq-research-detail" id="seqTechDetail" aria-label="선택한 연구의 효과와 비용"></section>
+    </div>
+    <footer class="seq-research-footer"><span>효과는 실제 게임 수치와 연결됩니다.</span><span>연구 비용은 OP로 결제</span></footer>
+   </div>
+  </dialog>
   <button id="seqNew" title="새 전장 시작">새 게임</button>`;
  stage.append(panel);
+ researchPanel=createResearchPanel({dialog:$('#seqResearch'),getState:()=>state,onPurchase:branch=>transact({type:'research',branch}),isBusy:()=>busy});
  $('#seqRecruit').onclick=()=>transact({type:'recruit',kind:'infantry'});
  $('#seqScout').onclick=()=>transact({type:'recruit',kind:'scout'});
  $('#seqOpenTech').onclick=research;
  $('#seqEnd').onclick=finish;
  $('#seqGuard').onclick=()=>{if(selected&&transact({type:'guard',id:selected}))selected=null;hud();};
  $('#seqUpgrade').onclick=()=>{if(city)transact({type:'upgrade',site:city});};
- $('#seqCloseTech').onclick=()=>$('#seqResearch').close();
+ $('#seqCloseTech').onclick=()=>researchPanel.close();
  $('#seqNew').onclick=()=>{if(confirm('현재 새 버전의 진행 내용을 초기화하시겠습니까?')){state=createSequentialGame({playerTeam:state.playerTeam,seed:Date.now()});selected=null;city=null;save();hud();message('새로운 자원 배치로 다시 시작했습니다.');}};
  $('#loading')?.remove();
  window.addEventListener('keydown',e=>{
