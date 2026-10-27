@@ -1,6 +1,8 @@
 import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=04';
 // Deterministic public-vision practice rules. Rendering never changes outcomes.
-export const SIZE=15, PRICE={wall:3,tower:7,recruit:5,scout:4};
+export const SIZE=15, TURN_LIMIT=15, CENTRAL_POINT='8,9';
+export const POINT_KEYS=['8,6','6,9','6,3','3,9','11,11','12,6',CENTRAL_POINT];
+export const PRICE={wall:3,tower:7,recruit:5,scout:4};
 export const CAMPUS={x:2,z:2,size:3},HOME={x:3,z:3},ENEMY_BASE={x:13,z:13};
 export const GATES=[{x:3,z:1},{x:5,z:3},{x:3,z:5},{x:1,z:3}];
 export const STATS={infantry:{name:'보병',hp:10,attack:4,defense:2,move:1},scout:{name:'정찰대',hp:7,attack:2,defense:1,move:2}};
@@ -12,7 +14,7 @@ export function terrain(x,z){
  if(x<0||z<0||x>=SIZE||z>=SIZE)return 'void';
  if(isCampus(x,z))return 'campus';
  if(x===13&&z===13)return 'enemy-base';
- if((x===8&&z===6)||(x===6&&z===9))return 'resource';
+ if(POINT_KEYS.includes(key(x,z)))return 'resource';
  if(x===10&&z>=1&&z<=10&&z!==5&&z!==9)return 'water';
  if(z===0&&x<7)return 'mountain';
  if((x===0&&z>5)||(z===14&&x<5)||(x===7&&z>=3&&z<=5))return 'forest';
@@ -20,12 +22,18 @@ export function terrain(x,z){
 }
 export const passable=(x,z)=>Number.isInteger(x)&&Number.isInteger(z)&&['grass','resource','forest'].includes(terrain(x,z));
 export const emptyPlan=()=>({orders:{},builds:[],projects:[]});
-export function initialState(){return {version:4,turn:1,gold:10,enemyGold:10,homeHP:30,enemyHP:30,result:null,
+export function initialState(){return {version:5,turn:1,gold:10,enemyGold:10,homeHP:30,enemyHP:30,result:null,
  units:[{id:'a1',team:'ally',kind:'infantry',x:5,z:3,hp:10},{id:'a2',team:'ally',kind:'scout',x:3,z:5,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:12,z:13,hp:10},{id:'e2',team:'enemy',kind:'scout',x:13,z:12,hp:7}],
- research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},structures:[],points:{'8,6':null,'6,9':null},pointReady:{},nextId:3};}
+ research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},structures:[],points:Object.fromEntries(POINT_KEYS.map(k=>[k,null])),pointReady:{},nextId:3,victoryMode:null};}
 export const availableGold=(s,p)=>s.gold-p.builds.reduce((n,b)=>n+PRICE[b.type],0)-reservedProjects(p);
 export const unitCap=(s,team='ally')=>Math.min(10,6+Object.entries(s.points).filter(([k,v])=>v===team&&(s.pointReady[k]??0)<=s.turn).length);
 export const income=(s,team='ally')=>5+growthIncome(s,team)+Object.entries(s.points).filter(([k,v])=>v===team&&(s.pointReady[k]??0)<=s.turn).length*2;
+export function victoryPoints(s,team='ally'){
+ const territory=Object.entries(s.points).reduce((total,[k,owner])=>owner===team?total+(k===CENTRAL_POINT?5:3):total,0);
+ const research=2*(s.research[team]?.done?.length??0);
+ const alive=(team==='ally'?s.homeHP:s.enemyHP)>0?5:0;
+ return territory+research+alive;
+}
 export function ownTerritory(s,u){return u.team==='ally'&&u.x>=1&&u.x<=5&&u.z>=1&&u.z<=5||u.team==='enemy'&&distance(u,ENEMY_BASE)<=2||Object.entries(s.points).some(([k,t])=>{const [x,z]=k.split(',').map(Number);return t===u.team&&distance(u,{x,z})<=1;});}
 const neighbors=p=>[[1,0],[0,1],[-1,0],[0,-1]].map(([x,z])=>({x:p.x+x,z:p.z+z}));
 export function reachable(s,u,plan=emptyPlan()){
@@ -71,12 +79,14 @@ export function canOrder(s,u,o,p=emptyPlan()){
  return ['guard','wait'].includes(o.type)?null:'알 수 없는 명령입니다.';
 }
 export function enemyOrders(s){
- const orders={};
+ const orders={},assigned=new Set();
  for(const u of s.units.filter(u=>u.team==='enemy')){
   const target=targets(s,u)[0];if(target){orders[u.id]={type:'attack',target};continue;}
-  if(Object.hasOwn(s.points,key(u.x,u.z))&&s.points[key(u.x,u.z)]!=='enemy'){orders[u.id]={type:'capture'};continue;}
-  const goals=Object.entries(s.points).filter(([,t])=>t!=='enemy').map(([k])=>{const [x,z]=k.split(',').map(Number);return {x,z};});goals.push(...GATES);
-  const goal=goals.sort((a,b)=>distance(u,a)-distance(u,b))[0];
+  if(Object.hasOwn(s.points,key(u.x,u.z))&&s.points[key(u.x,u.z)]!=='enemy'){orders[u.id]={type:'capture'};assigned.add(key(u.x,u.z));continue;}
+  const goals=Object.entries(s.points).filter(([k,t])=>t!=='enemy'&&!assigned.has(k)).map(([k])=>{const [x,z]=k.split(',').map(Number);return {x,z,k};});
+  goals.sort((a,b)=>distance(u,a)-distance(u,b)||a.x-b.x||a.z-b.z);
+  const goal=goals[0]??[...GATES].sort((a,b)=>distance(u,a)-distance(u,b))[0];
+  if(goals[0])assigned.add(goals[0].k);
   const moves=reachable(s,u).sort((a,b)=>distance(a,goal)-distance(b,goal)||a.x-b.x||a.z-b.z);
   orders[u.id]=moves.length?{type:'move',x:moves[0].x,z:moves[0].z}:{type:'guard'};
  }return orders;
@@ -108,8 +118,15 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
   if(['recruit','scout'].includes(b.type)){const kind=b.type==='scout'?'scout':'infantry';s.units.push({id:`a${s.nextId++}`,team:'ally',kind,x:b.x,z:b.z,hp:STATS[kind].hp});}
   else s.structures.push({id:`s${s.nextId++}`,type:b.type,x:b.x,z:b.z,hp:10,ready:s.turn+(b.type==='tower'?2:1)});events.push({type:'build',...b});}
  if(!s.homeHP&&!s.enemyHP)s.result='draw';else if(!s.homeHP)s.result='defeat';else if(!s.enemyHP)s.result='victory';
+ if(s.result)s.victoryMode='base';
  finishProjects(s,plan.projects??[],'ally',events);finishProjects(s,growthAI.projects,'enemy',events);
  advanceResearch(s,input,'ally',researchChoice,events);advanceResearch(s,input,'enemy',growthAI.technology,events);
  if(!s.result&&s.enemyGold>=5&&s.units.filter(u=>u.team==='enemy').length<unitCap(s,'enemy')){const spawn=neighbors(ENEMY_BASE).find(p=>passable(p.x,p.z)&&!s.units.some(u=>distance(u,p)===0)&&!s.structures.some(b=>distance(b,p)===0));if(spawn){s.enemyGold-=5;s.units.push({id:`e${s.nextId++}`,team:'enemy',kind:'infantry',...spawn,hp:10});events.push({type:'reinforce'});}}
- s.turn++;if(!s.result){const amount=income(s);s.gold+=amount;s.enemyGold+=income(s,'enemy');events.push({type:'income',amount});}else events.push({type:'income',amount:0});return {state:s,events};
+ s.turn++;
+ if(!s.result&&s.turn>TURN_LIMIT){
+  const ally=victoryPoints(s,'ally'),enemyScore=victoryPoints(s,'enemy');
+  s.result=ally>enemyScore?'victory':ally<enemyScore?'defeat':'draw';s.victoryMode='score';
+  events.push({type:'score',ally,enemy:enemyScore,text:`${TURN_LIMIT}턴 종료 · 점수 ${ally}:${enemyScore}`});
+ }
+ if(!s.result){const amount=income(s);s.gold+=amount;s.enemyGold+=income(s,'enemy');events.push({type:'income',amount});}else events.push({type:'income',amount:0});return {state:s,events};
 }

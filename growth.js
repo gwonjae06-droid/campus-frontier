@@ -23,7 +23,7 @@ export function canProject(s,p,o,remaining,team='ally'){
  if(o.type==='develop'){
   const d=DEPOSITS.find(d=>d.site===o.site);if(!d||s.developed[`${d.x},${d.z}`])return '개발 가능한 자원 타일이 없습니다.';
   if(s.units.some(u=>u.x===d.x&&u.z===d.z&&u.team!==team)||s.structures.some(b=>b.x===d.x&&b.z===d.z))return '자원 타일이 점유되었습니다.';
- }else if(home||s.specialties[o.site])return '특화는 미특화 일반 거점에서 한 번만 가능합니다.';
+ }else if(home||o.site==='8,9'||s.specialties[o.site])return '특화는 중앙 거점을 제외한 미특화 일반 거점에서만 가능합니다.';
  if(remaining<item.cost)return '사용 가능한 운영력이 부족합니다.';return null;
 }
 // Production is based on the start-of-turn snapshot, not ownership after combat.

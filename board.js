@@ -1,7 +1,7 @@
-import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=04';
-import {DEPOSITS} from './growth.js?v=04';
+import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=05';
+import {DEPOSITS} from './growth.js?v=05';
 import * as T from './vendor/three.module.js';
-import {SIZE,terrain,isCampus,key,stats,reachable,GATES} from './simulation.js?v=04';
+import {SIZE,terrain,isCampus,key,stats,reachable,GATES} from './simulation.js?v=05';
 import {makeCampus} from './campus.js';
 export const coord=n=>(n-7)*1.12;
 export function createBoard(container,data,onPick,onDragEnd,onViewChange){
@@ -19,7 +19,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
     if(type==='mountain')cone(world,.68,1.2,'#9dae97',coord(x),.5,coord(z),4);
     if(type==='forest'){box(world,.07,.4,.07,'#887357',coord(x),.2,coord(z));cone(world,.3,.7,'#427351',coord(x),.7,coord(z));}
     if(type==='water')box(world,.33,.012,.025,'#a9d9d7',coord(x),.015,coord(z));
-    if(type==='resource'){box(world,.58,.2,.58,'#e6d39c',coord(x),.1,coord(z));cone(world,.21,.42,'#be9850',coord(x),.4,coord(z),4);}
+    if(type==='resource'){const central=x===8&&z===9;box(world,central?.94:.58,.2,central?.94:.58,central?'#e9c46e':'#e6d39c',coord(x),.1,coord(z));cone(world,central?.33:.21,central?.68:.42,central?'#bd8438':'#be9850',coord(x),central?.55:.4,coord(z),central?6:4);}
   }
   const campus=makeCampus(data);campus.group.position.set(coord(3),.02,coord(3));world.add(campus.group);
   const outline=new T.LineLoop(new T.BufferGeometry().setFromPoints([new T.Vector3(-1.67,.12,-1.67),new T.Vector3(1.67,.12,-1.67),new T.Vector3(1.67,.12,1.67),new T.Vector3(-1.67,.12,1.67)]),new T.LineBasicMaterial({color:'#e4be65'}));campus.group.add(outline);
@@ -27,7 +27,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   const tent=new T.Group();tent.position.set(coord(13),0,coord(13));box(tent,.85,.4,.75,'#a96851',0,.2,0);cone(tent,.7,.5,'#bf7357',0,.65,0,4);flag(tent,.4,.8,.1,'#b84f3e');world.add(tent);
   box(world,17.3,.14,17.3,'#d1dacb',0,-.4,0);
   function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(2.9,.51,1);world.add(s);return s;}
-  const labels=[label(`성균관대 · ${data.buildings.length}개 건물`,coord(3),1.3,coord(2),'#285e46'),label('훈련 상대 · AI 전초기지',coord(13),1.5,coord(13),'#a9624c')];
+  const labels=[label(`성균관대 · ${data.buildings.length}개 건물`,coord(3),1.3,coord(2),'#285e46'),label('훈련 상대 · AI 전초기지',coord(13),1.5,coord(13),'#a9624c'),label('중앙 거점 · 5점',coord(8),1.65,coord(9),'#a6782a')];
   let dynamic=new T.Group(),preview=new T.Group();world.add(dynamic,preview);let unitMeshes=new Map(),currentState=null;
   function cleanup(g){g.traverse(o=>{o.geometry?.dispose();if(o.material&&!materials.has(o.material.color?.getStyle())){if(o.userData.ownMaterial)o.material.dispose();}});world.remove(g);}
   function createUnit(u,parent){const g=new T.Group();g.position.set(coord(u.x),0,coord(u.z));const color=u.team==='ally'?'#276b51':'#b65c47';box(g,.24,.3,.22,color,0,.24,0);box(g,.21,.19,.2,'#ead6af',0,.5,0);cone(g,.2,u.kind==='scout'?.28:.16,color,0,.67,0,4);box(g,.05,.35,.05,'#8d8971',.19,.36,0);box(g,.5,.045,.065,'#596a57',0,.84,0);box(g,.5*u.hp/stats(u).hp,.05,.07,u.team==='ally'?'#4dbb81':'#ec9673',-.25+.25*u.hp/stats(u).hp,.846,0);g.userData.unitId=u.id;parent.add(g);return g;}

@@ -1,25 +1,26 @@
-import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=04';
-import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap} from './simulation.js?v=04';
-import {createBoard} from './board.js?v=04';
-const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v4';
+import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=05';
+import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints} from './simulation.js?v=05';
+import {createBoard} from './board.js?v=05';
+const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v5';
 let state=initialState(),plan=emptyPlan(),selected=null,mode='move',busy=false,focused=false,board,committedEnemy;
 let storageAvailable=true;
-try {const saved=JSON.parse(localStorage.getItem(SAVE));if(saved?.state?.version===4&&Number.isInteger(saved.state.turn)&&Array.isArray(saved.state.units)&&Array.isArray(saved.state.structures)&&saved.plan?.builds&&saved.plan?.orders){state=saved.state;plan=saved.plan;}}catch{storageAvailable=false;}
+try {const saved=JSON.parse(localStorage.getItem(SAVE));if(saved?.state?.version===5&&Number.isInteger(saved.state.turn)&&Array.isArray(saved.state.units)&&Array.isArray(saved.state.structures)&&saved.plan?.builds&&saved.plan?.orders){state=saved.state;plan=saved.plan;}}catch{storageAvailable=false;}
 committedEnemy=enemyOrders(state);
 function save(){try{localStorage.setItem(SAVE,JSON.stringify({state,plan}));}catch{storageAvailable=false;}}
 function toast(text){$('#toast').textContent=text;}
 const names={wall:'성벽',tower:'방어탑',recruit:'보병 모집',scout:'정찰 모집'};
 const actionNames={move:'이동',attack:'공격',guard:'방어',capture:'점령',heal:'회복',wait:'대기'};
 function reserveAction(type){const u=state.units.find(u=>u.id===selected);if(type==='attack'){setMode('attack');toast('인접한 적 부대나 적 본진을 클릭하세요.');return;}const o={type},error=canOrder(state,u,o,plan);if(error){toast(error);return;}plan.orders[u.id]=o;save();refresh();toast(`${stats(u).name} · ${actionNames[type]} 예약`);}
-const siteName=site=>site==='home'?'캠퍼스':site.split(',').map(n=>Number(n)+1).join(', ')+' 거점';
+const siteName=site=>site==='home'?'캠퍼스':site===CENTRAL_POINT?'중앙 주요 거점':site.split(',').map(n=>Number(n)+1).join(', ')+' 거점';
+const keyForSite=(x,z)=>`${x},${z}`;
 function unitName(u){return `${u.team==='ally'?'아군':'적'} ${stats(u).name} ${u.id.slice(1)}`;}
 function selection(title,body){$('#selectionTitle').textContent=title;$('#selectionBody').textContent=body;}
 function setMode(next){mode=next;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));if(focused&&mode!=='inspect')setFocus(false);refresh();}
 function refresh(){
- $('#gold').textContent=availableGold(state,plan);$('#gold').title=`보유 ${state.gold} / 예약 ${state.gold-availableGold(state,plan)}`;$('#health').textContent=state.homeHP;$('#turn').textContent=state.turn;$('#enemyHP').textContent=`${state.enemyHP} / 30`;$('#enemyBar').value=state.enemyHP;
+ $('#gold').textContent=availableGold(state,plan);$('#gold').title=`보유 ${state.gold} / 예약 ${state.gold-availableGold(state,plan)}`;$('#health').textContent=state.homeHP;$('#turn').textContent=`${Math.min(state.turn,TURN_LIMIT)}/${TURN_LIMIT}`;$('#scoreBoard').textContent=`현재 점수 · 성균관대 ${victoryPoints(state,'ally')} : AI ${victoryPoints(state,'enemy')} · 중앙 거점 5점`;$('#enemyHP').textContent=`${state.enemyHP} / 30`;$('#enemyBar').value=state.enemyHP;
  const count=Object.keys(plan.orders).length+plan.builds.length+(plan.projects??[]).length+(Object.hasOwn(plan,'research')?1:0);$('#orderCount').textContent=count;$('#mobilePlan').textContent=`예약 ${count}개`;$('#mobilePlan').disabled=busy;$('#mobileClear').disabled=busy||!count;$('#clearPlan').disabled=busy||!count;
- $('#resolve').disabled=busy||!!state.result||!board;$('#resolve').textContent=state.result?({victory:'전초기지 점령 · 승리',defeat:'본진 함락',draw:'양쪽 본진 함락'})[state.result]:busy?'양쪽 명령 실행 중…':`턴 ${state.turn} 실행 →`;
- $('#turnHint').textContent=state.result?'새 연습을 시작해 다른 전략을 시도하세요.':`예약 ${state.gold-availableGold(state,plan)} OP · 명령 ${count}개 · 수입 +${income(state)} OP / 턴`;
+ $('#resolve').disabled=busy||!!state.result||!board;$('#resolve').textContent=state.result?(state.victoryMode==='score'?({victory:'점수 승리',defeat:'점수 패배',draw:'점수 무승부'})[state.result]:({victory:'전초기지 점령 · 승리',defeat:'본진 함락',draw:'양쪽 본진 함락'})[state.result]):busy?'양쪽 명령 실행 중…':`턴 ${state.turn} 실행 →`;
+ $('#turnHint').textContent=state.result?'새 연습을 시작해 다른 전략을 시도하세요.':`예약 ${state.gold-availableGold(state,plan)} OP · 명령 ${count}개 · 점수 ${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')} · 수입 +${income(state)} OP/턴`;
  document.querySelectorAll('[data-mode]').forEach(b=>b.disabled=busy||!!state.result);$('#reset').disabled=busy;
  const list=$('#orders');list.replaceChildren();
  const add=(text,cancel)=>{const row=document.createElement('div');row.className='order';const label=document.createElement('span');label.textContent=text;const button=document.createElement('button');button.textContent='×';button.setAttribute('aria-label',`${text} 취소`);button.disabled=busy;button.onclick=()=>{cancel();save();refresh();toast('예약을 취소했습니다.');};row.append(label,button);list.append(row);};
@@ -48,16 +49,18 @@ function pick(hit){
  if(mode==='attack'&&selected){const target=unit?{kind:'unit',id:unit.id}:structure?{kind:'structure',id:structure.id}:terrain(x,z)==='enemy-base'?{kind:'base',team:'enemy'}:null;const u=state.units.find(u=>u.id===selected),order={type:'attack',target},error=canOrder(state,u,order);if(error){toast(error);return;}plan.orders[selected]=order;save();refresh();toast('공격 예약 완료 · 대상이 사거리를 벗어나면 실패합니다.');return;}
  if(unit){selection(unitName(unit),`체력 ${unit.hp}/${stats(unit).hp} · ${x+1}, ${z+1} 구역. ${unit.team==='ally'?'인접한 빈 타일을 눌러 이동 예약.':'다음 행동은 턴이 실행될 때 공개됩니다.'}`);if(unit.team==='ally'&&mode==='move'){selected=unit.id;refresh();toast('밝은 타일로 이동하거나 공격·방어·점령·회복 중 하나를 선택하세요.');}else toast(`${unitName(unit)} · 체력 ${unit.hp}/${stats(unit).hp}`);return;}
  if(mode==='move'&&selected){const u=state.units.find(u=>u.id===selected);const error=canMove(state,u,x,z,plan);if(error){toast(error);return;}if(Object.entries(plan.orders).some(([id,o])=>id!==selected&&o.type==='move'&&o.x===x&&o.z===z)){toast('다른 아군 부대가 이 칸으로 이동을 예약했습니다.');return;}plan.orders[selected]={type:'move',x,z};save();refresh();toast(`${unitName(u)} → ${x+1}, ${z+1} 이동 예약. 턴 실행 시 함께 움직입니다.`);return;}
- const deposit=DEPOSITS.find(d=>d.x===x&&d.z===z);if(deposit){selection('개발 자원',state.developed[`${x},${z}`]?'개발 완료 · 소유 작업장이 정상 상태일 때 OP +1/턴.':'연구와 거점 관리에서 자원 개발 연구 후 3 OP로 개발합니다. 부대는 이 타일을 통과할 수 있습니다.');return;}
+ const site=keyForSite(x,z);if(Object.hasOwn(state.points,site)){const owner=state.points[site];selection(site===CENTRAL_POINT?'★ 중앙 주요 거점':'일반 거점',`${owner==='ally'?'성균관대 소유':owner==='enemy'?'AI 소유':'중립'} · ${site===CENTRAL_POINT?5:3}점 · 정상 거점 수입 +2 OP/턴. 점령은 거점 위 부대가 다음 턴에 명령을 예약해야 합니다.`);return;}
+  const deposit=DEPOSITS.find(d=>d.x===x&&d.z===z);if(deposit){selection('개발 자원',state.developed[`${x},${z}`]?'개발 완료 · 소유 작업장이 정상 상태일 때 OP +1/턴.':'연구와 거점 관리에서 자원 개발 연구 후 3 OP로 개발합니다. 부대는 이 타일을 통과할 수 있습니다.');return;}
  const type=terrain(x,z);selection(structure?names[structure.type]:type==='resource'?'자원 거점':type==='enemy-base'?'AI 전초기지':`${x+1}, ${z+1} 구역`,structure?`내구도 ${structure.hp}. ${structure.type==='tower'?'사거리 2칸, 공격 3. 2턴 건설, 완공 다음 턴부터 공격.':'적의 이동을 막습니다.'}`:type==='resource'?'거점에 도착한 다음 턴에 점령 명령을 내리세요. 정상 거점은 OP +2. 적 거점은 한 턴 안정화합니다.':type==='enemy-base'?'인접한 아군의 공격을 예약하세요. 이동 후 자동 공격하지 않습니다.':'부대를 선택하거나 건설 도구를 선택하세요.');
 }
 async function execute(){if(busy||state.result)return;busy=true;selected=null;refresh();try{const before=state,{state:next,events}=resolveTurn(state,plan,committedEnemy);state=next;plan=emptyPlan();committedEnemy=enemyOrders(state);save();await board.animate(before,next,events,phase=>{$('#phase').textContent=`턴 ${before.turn} 결과 재생 · ${phase}`;});const destroyed=events.filter(e=>e.type==='destroy').length,attacks=events.filter(e=>e.type==='attack').length,income=events.find(e=>e.type==='income').amount;
- toast(state.result?({victory:'승리! 적 전초기지를 점령했습니다.',defeat:'본진이 함락되었습니다. 새 연습에서 방어선을 바꿔보세요.',draw:'양쪽 본진이 동시에 함락되었습니다.'})[state.result]:`턴 ${state.turn-1} 완료 · 교전 ${attacks}회${destroyed?` · 부대 ${destroyed}개 소멸`:''} · 자원 +${income}`);selection(`턴 ${state.turn-1} 결과`,`${events.filter(e=>e.type==='move').length}개 부대 이동 · ${attacks}회 공격 · 수입 +${income}${events.some(e=>e.type==='reinforce')?' · 적 병력 모집':''}${events.filter(e=>e.type==='failed'||['research','project'].includes(e.type)&&e.team==='ally').map(e=>' · '+e.text).join('')}`);
+ toast(state.result?(state.victoryMode==='score'?`15턴 종료 · 점수 ${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')} · ${state.result==='victory'?'승리':state.result==='defeat'?'패배':'무승부'}`:({victory:'승리! 적 전초기지를 점령했습니다.',defeat:'본진이 함락되었습니다. 새 연습에서 방어선을 바꿔보세요.',draw:'양쪽 본진이 동시에 함락되었습니다.'})[state.result]):`턴 ${state.turn-1} 완료 · 교전 ${attacks}회${destroyed?` · 부대 ${destroyed}개 소멸`:''} · 자원 +${income}`);selection(`턴 ${state.turn-1} 결과`,`${events.filter(e=>e.type==='move').length}개 부대 이동 · ${attacks}회 공격 · 수입 +${income}${events.some(e=>e.type==='reinforce')?' · 적 병력 모집':''}${events.filter(e=>e.type==='failed'||['research','project'].includes(e.type)&&e.team==='ally').map(e=>' · '+e.text).join('')}`);
  }catch(error){toast(`명령을 실행하지 못했습니다: ${error.message}`);}finally{busy=false;$('#phase').textContent=state.result?'연습 종료':'명령 예약';refresh();}}
  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{setMode(b.dataset.mode);toast(mode==='move'?'초록 부대를 선택한 뒤 인접한 타일을 누르세요.':mode==='inspect'?'건물·부대·타일을 눌러 정보를 확인하세요.':`${names[mode]} · 캠퍼스 영토에 예약하세요. 모집은 금빛 출전 타일입니다.`);});
  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>reserveAction(b.dataset.action));
  $('#resolve').onclick=execute;$('#clearPlan').onclick=()=>{plan=emptyPlan();save();refresh();toast('모든 예약을 취소하고 자원을 돌려놓았습니다.');};$('#focusCampus').onclick=()=>setFocus(!focused);$('#overview').onclick=()=>setFocus(false);
- $('#rotateLeft').onclick=()=>board?.rotate(-1);$('#rotateRight').onclick=()=>board?.rotate(1);$('#zoomIn').onclick=()=>board?.zoomBy(.3);$('#zoomOut').onclick=()=>board?.zoomBy(-.3);
+ $('#pitchLow').onclick=()=>board?.setPitch(22);$('#pitchHigh').onclick=()=>board?.setPitch(72);
+  $('#rotateLeft').onclick=()=>board?.rotate(-1);$('#rotateRight').onclick=()=>board?.rotate(1);$('#zoomIn').onclick=()=>board?.zoomBy(.3);$('#zoomOut').onclick=()=>board?.zoomBy(-.3);
  $('#pitch').oninput=e=>board?.setPitch(Number(e.target.value));$('#resetView').onclick=()=>{setFocus(false);board?.resetView();};
  $('#growth').onclick=()=>$('#growthDialog').showModal();
  $('#help').onclick=()=>$('#dialog').showModal();$('#credits').onclick=()=>$('#creditsDialog').showModal();$('#reset').onclick=()=>$('#resetDialog').showModal();document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
@@ -67,7 +70,7 @@ $('#planDialog').addEventListener('close',()=>document.querySelector('aside').in
 $('#mobileClear').onclick=()=>{plan=emptyPlan();save();refresh();toast('모든 예약을 취소했습니다.');};
 $('#mobileReset').onclick=()=>{$('#dialog').close();$('#resetDialog').showModal();};
  addEventListener('keydown',e=>{if(e.key==='Escape'&&!busy){selected=null;if(focused)setFocus(false);setMode('move');}});
- try{const response=await fetch('./data/skku-campus.json');if(!response.ok)throw new Error('지도 데이터를 불러오지 못했습니다.');const data=await response.json();board=createBoard($('#game'),data,pick,null,pitch=>{$('#pitch').value=Math.round(pitch);$('#pitchValue').textContent=`${Math.round(pitch)}°`;});$('#buildingCount').textContent=board.campusCount;$('#loading').remove();refresh();try{if(!localStorage.getItem(SAVE)&&localStorage.getItem('campus-frontier-turn-v3'))toast('규칙 변경으로 새 연습을 시작합니다. 이전 저장은 별도로 보존됩니다.');}catch{}if(!storageAvailable)toast('브라우저 저장을 사용할 수 없습니다. 이번 플레이는 새로고침 시 초기화됩니다.');}catch(error){$('#loading').textContent=`실행 오류: ${error.message} 새로고침해 다시 시도하세요.`;}
+ try{const response=await fetch('./data/skku-campus.json');if(!response.ok)throw new Error('지도 데이터를 불러오지 못했습니다.');const data=await response.json();board=createBoard($('#game'),data,pick,null,pitch=>{$('#pitch').value=Math.round(pitch);$('#pitchValue').textContent=`${Math.round(pitch)}°`;});$('#buildingCount').textContent=board.campusCount;$('#loading').remove();refresh();try{if(!localStorage.getItem(SAVE)&&localStorage.getItem('campus-frontier-turn-v4'))toast('규칙 변경으로 새 연습을 시작합니다. 이전 저장은 별도로 보존됩니다.');}catch{}if(!storageAvailable)toast('브라우저 저장을 사용할 수 없습니다. 이번 플레이는 새로고침 시 초기화됩니다.');}catch(error){$('#loading').textContent=`실행 오류: ${error.message} 새로고침해 다시 시도하세요.`;}
 
 function refreshGrowth(){
  const r=state.research.ally,active=Object.hasOwn(plan,'research')?plan.research:r.active,rate=researchRate(state);
@@ -88,7 +91,7 @@ function refreshGrowth(){
   title.textContent=home?'성균관대 캠퍼스':siteName(site);const own=home||state.points[site]==='ally',normal=home||normalPoint(state,site,'ally');
   info.textContent=home?`OP +${state.developed['5,5']?6:5} · RP +3 · 캠퍼스 작업 슬롯 1`:!own?(state.points[site]?'적 소유':'중립 · 부대의 점령 명령 필요'):!normal?`안정화 중 · ${state.pointReady[site]}턴 정상화`:`정상 · OP +${state.specialties[site]==='economy'?4:2} · RP +${state.specialties[site]==='science'?2:0}${state.specialties[site]?' · '+PROJECTS[state.specialties[site]].name:''}`;
   card.append(title,info);
-  if(own)for(const type of home?['develop']:['develop','economy','science']){
+  if(own&&site!==CENTRAL_POINT)for(const type of home?['develop']:['develop','economy','science']){
    const o={site,type},error=canProject(state,plan,o,availableGold(state,plan)),b=document.createElement('button'),item=PROJECTS[type];b.textContent=`${item.name} · ${item.cost} OP / 1턴`;b.disabled=busy||!!state.result||!!error;b.title=error??'다음 턴부터 산출 적용';b.onclick=()=>{plan.projects??=[];plan.projects.push(o);save();refresh();toast(`${item.name} 예약 · 명령 목록에서 취소 가능`);};card.append(b);
    if(error){const note=document.createElement('small');note.textContent=error;card.append(note);}
   }sites.append(card);
