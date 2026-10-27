@@ -23,7 +23,7 @@ const capture=initialState();capture.units=[unit('a1','ally',7,6)];
 const arrived=resolveTurn(capture,order('a1',{type:'move',x:8,z:6}),{}).state;assert.equal(arrived.points['8,6'],null);
 const captured=resolveTurn(arrived,order('a1',{type:'capture'}),{}).state;assert.equal(captured.points['8,6'],'ally');assert.equal(captured.gold,22);
 arrived.points['8,6']='enemy';const hostile=resolveTurn(arrived,order('a1',{type:'capture'}),{}).state;assert.equal(hostile.gold,20);assert.equal(resolveTurn(hostile,emptyPlan(),{}).state.gold,27);
-const build=initialState();build.units=[unit('e1','enemy',6,1)];const bp=emptyPlan();bp.builds=[{type:'tower',x:5,z:1}];const t=resolveTurn(build,bp,{}).state;assert.equal(t.units[0].hp,10);assert.ok(canBuild(t,emptyPlan(),'wall',1,1));
+const build=initialState();build.research.ally.done=['defense','towers'];build.units=[unit('e1','enemy',6,1)];const bp=emptyPlan();bp.builds=[{type:'tower',x:5,z:1}];const t=resolveTurn(build,bp,{}).state;assert.equal(t.units[0].hp,10);assert.ok(canBuild(t,emptyPlan(),'wall',1,1));
 const t2=resolveTurn(t,emptyPlan(),{}).state;assert.equal(t2.units[0].hp,10);assert.ok(resolveTurn(t2,emptyPlan(),{}).events.some(e=>e.type==='attack'));
 const collide=initialState();collide.units=[unit('a1','ally',6,6),unit('e1','enemy',8,6)];const c=resolveTurn(collide,order('a1',{type:'move',x:7,z:6}),{e1:{type:'move',x:7,z:6}});assert.equal(c.state.units[0].x,6);assert.equal(c.state.units[1].x,8);
 const win=initialState();win.units=[unit('a1','ally',12,13)];win.enemyHP=4;assert.equal(resolveTurn(win,order('a1',{type:'attack',target:{kind:'base',team:'enemy'}}),{}).state.result,'victory');

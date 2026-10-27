@@ -1,3 +1,4 @@
+import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=04';
 // Deterministic public-vision practice rules. Rendering never changes outcomes.
 export const SIZE=15, PRICE={wall:3,tower:7,recruit:5,scout:4};
 export const CAMPUS={x:2,z:2,size:3},HOME={x:3,z:3},ENEMY_BASE={x:13,z:13};
@@ -18,13 +19,13 @@ export function terrain(x,z){
  return 'grass';
 }
 export const passable=(x,z)=>Number.isInteger(x)&&Number.isInteger(z)&&['grass','resource','forest'].includes(terrain(x,z));
-export const emptyPlan=()=>({orders:{},builds:[]});
-export function initialState(){return {version:3,turn:1,gold:10,enemyGold:10,homeHP:30,enemyHP:30,result:null,
+export const emptyPlan=()=>({orders:{},builds:[],projects:[]});
+export function initialState(){return {version:4,turn:1,gold:10,enemyGold:10,homeHP:30,enemyHP:30,result:null,
  units:[{id:'a1',team:'ally',kind:'infantry',x:5,z:3,hp:10},{id:'a2',team:'ally',kind:'scout',x:3,z:5,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:12,z:13,hp:10},{id:'e2',team:'enemy',kind:'scout',x:13,z:12,hp:7}],
- structures:[],points:{'8,6':null,'6,9':null},pointReady:{},nextId:3};}
-export const availableGold=(s,p)=>s.gold-p.builds.reduce((n,b)=>n+PRICE[b.type],0);
+ research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},structures:[],points:{'8,6':null,'6,9':null},pointReady:{},nextId:3};}
+export const availableGold=(s,p)=>s.gold-p.builds.reduce((n,b)=>n+PRICE[b.type],0)-reservedProjects(p);
 export const unitCap=(s,team='ally')=>Math.min(10,6+Object.entries(s.points).filter(([k,v])=>v===team&&(s.pointReady[k]??0)<=s.turn).length);
-export const income=(s,team='ally')=>5+Object.entries(s.points).filter(([k,v])=>v===team&&(s.pointReady[k]??0)<=s.turn).length*2;
+export const income=(s,team='ally')=>5+growthIncome(s,team)+Object.entries(s.points).filter(([k,v])=>v===team&&(s.pointReady[k]??0)<=s.turn).length*2;
 export function ownTerritory(s,u){return u.team==='ally'&&u.x>=1&&u.x<=5&&u.z>=1&&u.z<=5||u.team==='enemy'&&distance(u,ENEMY_BASE)<=2||Object.entries(s.points).some(([k,t])=>{const [x,z]=k.split(',').map(Number);return t===u.team&&distance(u,{x,z})<=1;});}
 const neighbors=p=>[[1,0],[0,1],[-1,0],[0,-1]].map(([x,z])=>({x:p.x+x,z:p.z+z}));
 export function reachable(s,u,plan=emptyPlan()){
@@ -40,6 +41,10 @@ export function canMove(s,u,x,z,p=emptyPlan()){if(!u)return '부대를 먼저 �
 export function canBuild(s,p,type,x,z){
  if(s.result)return '게임이 종료되었습니다.';
  if(!Object.hasOwn(PRICE,type))return '알 수 없는 생산입니다.';
+ if(type==='wall'&&!hasTech(s,'ally','defense'))return '방어 건축 연구가 필요합니다.';
+ if(type==='tower'&&!hasTech(s,'ally','towers'))return '방어 체계 연구가 필요합니다.';
+ if(DEPOSITS.some(d=>d.x===x&&d.z===z))return '개발 자원 타일에는 방어 시설을 설치할 수 없습니다.';
+ if((p.projects??[]).some(o=>o.site==='home'))return '캠퍼스에서 자원 개발을 예약했습니다.';
  if(s.structures.some(b=>b.ready>s.turn))return '캠퍼스 작업 슬롯에서 방어탑을 건설 중입니다.';
  if(p.builds.length)return '캠퍼스 작업 슬롯은 한 턴에 하나입니다.';
  if(!passable(x,z)||terrain(x,z)==='resource')return '빈 일반 타일을 선택하세요.';
@@ -80,12 +85,16 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  if(input.result)throw Error('Game has ended');
  const accepted=emptyPlan();for(const b of plan.builds){const e=canBuild(input,accepted,b.type,b.x,b.z);if(e)throw Error(e);accepted.builds.push(b);}
  for(const [id,o] of Object.entries(plan.orders)){const u=input.units.find(v=>v.id===id&&v.team==='ally');const e=canOrder(input,u,o,plan);if(e)throw Error(e);}
- const s=structuredClone(input),events=[],orders={...enemy,...plan.orders},damage=new Map();s.gold=availableGold(input,plan);
+ const researchChoice=Object.hasOwn(plan,'research')?plan.research:input.research.ally.active;
+ const researchError=canResearch(input,'ally',researchChoice);if(researchError)throw Error(researchError);
+ for(const o of plan.projects??[]){const e=canProject(input,accepted,o,availableGold(input,accepted));if(e)throw Error(e);accepted.projects.push(o);}
+ const growthAI=aiGrowth(input);
+ const s=structuredClone(input),events=[],orders={...enemy,...plan.orders},damage=new Map();s.gold=availableGold(input,plan);s.enemyGold-=growthAI.projects.reduce((sum,o)=>sum+PROJECTS[o.type].cost,0);
  const proposals=new Map();for(const u of input.units){const o=orders[u.id];if(o?.type!=='move'||canMove(input,u,o.x,o.z,plan))continue;const k=key(o.x,o.z);if(!proposals.has(k))proposals.set(k,[]);proposals.get(k).push({u,o});}
  for(const list of proposals.values()){if(list.length>1){events.push({type:'collision',text:'이동 목적지가 겹쳐 대기했습니다.'});continue;}const {u,o}=list[0],v=s.units.find(v=>v.id===u.id);v.x=o.x;v.z=o.z;events.push({type:'move',id:u.id,from:{x:u.x,z:u.z},to:{x:o.x,z:o.z}});}
  function attack(from,target,power){
   const victim=target.kind==='unit'?s.units.find(v=>v.id===target.id):target.kind==='structure'?s.structures.find(v=>v.id===target.id):null;
-  const defense=target.kind==='unit'?stats(victim).defense+(terrain(victim.x,victim.z)==='forest'?1:0)+(orders[victim.id]?.type==='guard'?1:0):target.kind==='structure'?1:0;
+  const defense=target.kind==='unit'?stats(victim).defense+(terrain(victim.x,victim.z)==='forest'?1:0)+(orders[victim.id]?.type==='guard'?(hasTech(input,victim.team,'training')?2:1):0):target.kind==='structure'?1:0;
   const amount=Math.max(1,power-defense),id=target.kind==='base'?target.team:target.id;damage.set(id,(damage.get(id)??0)+amount);events.push({type:'attack',from,target,amount});
  }
  for(const u of s.units){const o=orders[u.id];if(o?.type==='attack'){if(targets(s,u).some(t=>sameTarget(t,o.target)))attack({kind:'unit',id:u.id},o.target,stats(u).attack);else events.push({type:'failed',text:`${u.id}: 공격 대상이 사거리를 벗어났습니다.`});}}
@@ -99,6 +108,8 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
   if(['recruit','scout'].includes(b.type)){const kind=b.type==='scout'?'scout':'infantry';s.units.push({id:`a${s.nextId++}`,team:'ally',kind,x:b.x,z:b.z,hp:STATS[kind].hp});}
   else s.structures.push({id:`s${s.nextId++}`,type:b.type,x:b.x,z:b.z,hp:10,ready:s.turn+(b.type==='tower'?2:1)});events.push({type:'build',...b});}
  if(!s.homeHP&&!s.enemyHP)s.result='draw';else if(!s.homeHP)s.result='defeat';else if(!s.enemyHP)s.result='victory';
+ finishProjects(s,plan.projects??[],'ally',events);finishProjects(s,growthAI.projects,'enemy',events);
+ advanceResearch(s,input,'ally',researchChoice,events);advanceResearch(s,input,'enemy',growthAI.technology,events);
  if(!s.result&&s.enemyGold>=5&&s.units.filter(u=>u.team==='enemy').length<unitCap(s,'enemy')){const spawn=neighbors(ENEMY_BASE).find(p=>passable(p.x,p.z)&&!s.units.some(u=>distance(u,p)===0)&&!s.structures.some(b=>distance(b,p)===0));if(spawn){s.enemyGold-=5;s.units.push({id:`e${s.nextId++}`,team:'enemy',kind:'infantry',...spawn,hp:10});events.push({type:'reinforce'});}}
  s.turn++;if(!s.result){const amount=income(s);s.gold+=amount;s.enemyGold+=income(s,'enemy');events.push({type:'income',amount});}else events.push({type:'income',amount:0});return {state:s,events};
 }

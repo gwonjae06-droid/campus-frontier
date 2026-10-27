@@ -1,11 +1,13 @@
+import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=04';
+import {DEPOSITS} from './growth.js?v=04';
 import * as T from './vendor/three.module.js';
-import {SIZE,terrain,isCampus,key,stats,reachable,GATES} from './simulation.js?v=03';
+import {SIZE,terrain,isCampus,key,stats,reachable,GATES} from './simulation.js?v=04';
 import {makeCampus} from './campus.js';
 export const coord=n=>(n-7)*1.12;
-export function createBoard(container,data,onPick,onDragEnd){
+export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   const scene=new T.Scene();scene.background=new T.Color('#e9eee4');const world=new T.Group();scene.add(world);
   const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;container.append(renderer.domElement);
-  const camera=new T.OrthographicCamera(-15,15,15,-15,.01,150),materials=new Map(),tilePicks=[];let angle=Math.PI/4,zoom=1,focus=false,target=new T.Vector3(),w=1,h=1;
+  const camera=new T.OrthographicCamera(-15,15,15,-15,.01,150),materials=new Map(),tilePicks=[];let pitch=DEFAULT_PITCH,angle=Math.PI/4,zoom=1,focus=false,target=new T.Vector3(),w=1,h=1;
   scene.add(new T.HemisphereLight(0xffffff,0x829276,2));const sun=new T.DirectionalLight(0xfff2d8,2.8);sun.position.set(-12,26,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:70});sun.shadow.normalBias=.015;scene.add(sun);
   function mat(c){if(!materials.has(c))materials.set(c,new T.MeshStandardMaterial({color:c,roughness:.85}));return materials.get(c);}
   function box(parent,w,h,d,color,x,y,z){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),mat(color));mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
@@ -34,14 +36,22 @@ export function createBoard(container,data,onPick,onDragEnd){
   function sync(state,plan,selected,mode){currentState=state;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();for(const u of state.units)unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);
     for(const [id,o] of Object.entries(plan.orders)){const u=state.units.find(u=>u.id===id);if(!u)continue;if(o.type!=='move')marker(preview,u.x,u.z,o.type==='attack'?'#e09569':'#8cbccc');if(o.type==='move'){marker(preview,o.x,o.z,'#e9b84e');const line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(coord(u.x),.16,coord(u.z)),new T.Vector3(coord(o.x),.16,coord(o.z))]),new T.LineBasicMaterial({color:'#bd8c2d'}));line.userData.ownMaterial=true;preview.add(line);}}
     const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move')for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');}
+    for(const d of DEPOSITS){const developed=state.developed[`${d.x},${d.z}`];box(dynamic,.45,developed?.25:.08,.45,developed?'#73a5ac':'#bd9f61',coord(d.x),developed?.13:.04,coord(d.z));}
     for(const g of GATES)marker(preview,g.x,g.z,'#eac76c');
     for(const [k,owner] of Object.entries(state.points)){if(!owner)continue;const [x,z]=k.split(',').map(Number);flag(dynamic,coord(x)+.25,.3,coord(z),owner==='ally'?'#2b8f63':'#bb6048');}
   }
-  function resize(){const rect=container.getBoundingClientRect();w=rect.width;h=rect.height;renderer.setSize(w,h);const span=Math.max(9.6,13/(w/h));camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.zoom=zoom;camera.position.set(target.x+Math.sin(angle)*26,27,target.z+Math.cos(angle)*26);camera.lookAt(target);camera.updateProjectionMatrix();}new ResizeObserver(resize).observe(container);resize();
+  function resize(){const rect=container.getBoundingClientRect();w=rect.width;h=rect.height;renderer.setSize(w,h);const span=Math.max(9.6,13.3*Math.sin(pitch*Math.PI/180),13/(w/h));camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.zoom=zoom;const pos=orbitPosition(angle,pitch,target);camera.position.set(pos.x,pos.y,pos.z);camera.lookAt(target);camera.updateProjectionMatrix();onViewChange?.(pitch);}new ResizeObserver(resize).observe(container);resize();
   const ray=new T.Raycaster(),pointer=new T.Vector2();function pick(e){const r=container.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);if(focus){const building=ray.intersectObjects(campus.picks)[0];if(building)return {building:building.object.userData.building};}const hit=ray.intersectObjects(tilePicks)[0];return hit?.object.userData.tile;}
-  let down=null;const canvas=renderer.domElement;canvas.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,a:angle};canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(down&&Math.abs(e.clientX-down.x)>5){angle=down.a+(e.clientX-down.x)*.006;resize();}});canvas.addEventListener('pointercancel',()=>down=null);canvas.addEventListener('pointerup',e=>{if(!down)return;const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y)>7;down=null;if(moved){onDragEnd?.();return;}const hit=pick(e);if(hit)onPick(hit)});canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=T.MathUtils.clamp(zoom-e.deltaY*.001,.7,7);resize()},{passive:false});
+  let down=null;const canvas=renderer.domElement;
+  canvas.addEventListener('pointerdown',e=>{if(e.button!==0||down)return;down={id:e.pointerId,x:e.clientX,y:e.clientY,a:angle,p:pitch,moved:false};canvas.setPointerCapture(e.pointerId)});
+  canvas.addEventListener('pointermove',e=>{if(!down||e.pointerId!==down.id)return;const dx=e.clientX-down.x,dy=e.clientY-down.y;if(Math.hypot(dx,dy)>7)down.moved=true;if(down.moved){angle=down.a+dx*.006;pitch=clampPitch(down.p+dy*.18);resize();}});
+  canvas.addEventListener('pointercancel',()=>down=null);canvas.addEventListener('lostpointercapture',()=>down=null);
+  canvas.addEventListener('pointerup',e=>{if(!down||e.pointerId!==down.id)return;const moved=down.moved||Math.hypot(e.clientX-down.x,e.clientY-down.y)>7;down=null;canvas.releasePointerCapture(e.pointerId);if(moved){onDragEnd?.();return;}const hit=pick(e);if(hit)onPick(hit)});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=T.MathUtils.clamp(zoom-e.deltaY*.001,.7,7);resize()},{passive:false});
+  function setPitch(value){pitch=clampPitch(value);resize();}
+  function resetView(){pitch=DEFAULT_PITCH;angle=Math.PI/4;setFocus(false);}
   function setFocus(value){focus=value;zoom=value?4.4:1;target=value?new T.Vector3(coord(3),.25,coord(3)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
-  function rotate(d){angle+=d*Math.PI/4;resize();}function zoomBy(d){zoom=T.MathUtils.clamp(zoom+d,.7,7);resize();}
+  function rotate(d){angle+=d*Math.PI/2;resize();}function zoomBy(d){zoom=T.MathUtils.clamp(zoom+d,.7,7);resize();}
   async function animate(before,after,events,onPhase){
     onPhase('이동');const moves=events.filter(e=>e.type==='move');const start=performance.now();await new Promise(resolve=>{function frame(now){const t=Math.min(1,(now-start)/650),ease=t*t*(3-2*t);for(const m of moves){const mesh=unitMeshes.get(m.id);if(mesh)mesh.position.set(T.MathUtils.lerp(coord(m.from.x),coord(m.to.x),ease),Math.sin(t*Math.PI)*.07,T.MathUtils.lerp(coord(m.from.z),coord(m.to.z),ease));}if(t<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame)});
     onPhase('전투');const flashes=new T.Group();world.add(flashes);function pos(ref){if(ref.kind==='unit'){const u=after.units.find(u=>u.id===ref.id)??before.units.find(u=>u.id===ref.id);const mesh=unitMeshes.get(ref.id);return mesh?mesh.position.clone().add(new T.Vector3(0,.5,0)):u?new T.Vector3(coord(u.x),.5,coord(u.z)):null;}if(ref.kind==='structure'){const s=before.structures.find(s=>s.id===ref.id);return s?new T.Vector3(coord(s.x),.8,coord(s.z)):null;}return new T.Vector3(coord(ref.team==='ally'?4:13),.6,coord(ref.team==='ally'?4:13));}
@@ -49,5 +59,5 @@ export function createBoard(container,data,onPick,onDragEnd){
     await new Promise(resolve=>setTimeout(resolve,400));cleanup(flashes);onPhase('정산');await new Promise(resolve=>setTimeout(resolve,200));
   }
   function render(){requestAnimationFrame(render);renderer.render(scene,camera)}render();
-  return {sync,setFocus,rotate,zoomBy,animate,campusCount:campus.group.userData.buildingCount};
+  return {sync,setFocus,setPitch,resetView,rotate,zoomBy,animate,campusCount:campus.group.userData.buildingCount};
 }
