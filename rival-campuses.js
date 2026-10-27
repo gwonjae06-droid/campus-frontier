@@ -64,6 +64,10 @@ function makeModel(which){
   for(const [x,z] of [[-1.89,-.2],[-1.91,1.2],[1.9,-.25],[1.84,1.18],[-.93,-1.75],[.93,-1.75]])tree(x,z,.69);
   column(-.30,-1.03);column(.30,-1.03);
  }
+ // Fit every complete building/tree roof inside the four-tile (4.48-unit) plot.
+ const bounds=new T.Box3().setFromObject(group);
+ const footprint=Math.max(bounds.max.x-bounds.min.x,bounds.max.z-bounds.min.z);
+ if(footprint>4.18)group.scale.setScalar(4.18/footprint);
  group.userData={buildingCount:pick.length,kind:which,miniature:true,grounded:true};
  return {group,picks:pick,buildingCount:pick.length};
 }
