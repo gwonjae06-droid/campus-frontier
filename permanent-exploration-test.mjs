@@ -47,7 +47,7 @@ const b=readFileSync('board.js','utf8'),g=readFileSync('game.js','utf8'),
       v=readFileSync('vision.js','utf8'),sim=readFileSync('simulation.js','utf8');
 assert.ok(b.includes("g.visible=state.gameMode!=='standard'||explored.has(k)"),'render discovered ground when out of sight');
 assert.ok(b.includes("if(!explored.has(k)&&"),'only undiscovered tiles get opaque fog');
-assert.ok(b.includes("const owner=state.gameMode==='standard'&&!visible.has(k)?state.lastKnownPoints?.ally?.[k]:currentOwner;"));
+assert.ok(b.includes("const owner=state.gameMode==='standard'&&!visible.has(k)?state.lastKnownPoints?.[viewer]?.[k]:currentOwner;"));
 assert.ok(b.includes("u.team==='ally'||visible.has(tileKey(u.x,u.z))"),'enemy units still require live sight');
 assert.ok(g.includes("u.team==='ally'||currentSight"),'clicking known ground must not leak hidden enemies');
 assert.ok(g.includes("if(state.gameMode==='standard'&&!discovered&&!currentSight)"),'old exploration remains inspectable');
