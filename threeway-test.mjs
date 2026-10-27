@@ -27,4 +27,16 @@ let final=initialState('standard');final.turn=30;final.units=[];final.research.a
 final=resolveTurn(final,emptyPlan(),{}).state;
 assert.equal(final.result,'victory');assert.equal(final.victoryMode,'score');assert.equal(final.winner,'ally');
 const legacy=initialState();assert.equal(legacy.version,8);assert.equal(legacy.rivalHP,undefined);
+let campaign=initialState('standard');
+for(let i=0;i<TURN_LIMIT&&!campaign.result;i++){
+ const prior=campaign;campaign=resolveTurn(campaign,emptyPlan(),enemyOrders(campaign)).state;
+ assert.equal(campaign.turn,prior.turn+1);
+ assert.ok(campaign.gold>=0&&campaign.enemyGold>=0&&campaign.rivalGold>=0);
+ assert.ok([campaign.homeHP,campaign.enemyHP,campaign.rivalHP].every(v=>v>=0&&v<=30));
+ assert.ok(campaign.units.every(u=>u.hp>0&&Number.isFinite(u.hp)&&passable(u.x,u.z)));
+ assert.ok(campaign.units.every((u,i)=>campaign.units.findIndex(v=>v.x===u.x&&v.z===u.z)===i),'overlapping units');
+ for(const team of ['ally','enemy','rival'])assert.ok(campaign.research[team].bank>=0&&campaign.research[team].bank<=10);
+}
+assert.ok(['victory','defeat','draw'].includes(campaign.result),'campaign must conclude in 30 turns');
+console.log('PASS: 30-turn three-way deterministic stress simulation');
 console.log('PASS: 3-faction startup, 2 AI turn plans, rival economy, rival campus combat/capture, 30-turn score, practice compatibility');
