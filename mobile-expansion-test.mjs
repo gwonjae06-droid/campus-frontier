@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import {initialState,emptyPlan,resolveTurn,canBuild,canMove,targets,STATS,PRICE} from './simulation.js';
+import {canProject,researchRate,TECHS} from './growth.js';
+import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js';
+
+assert.equal(TECHS.siege.cost,12);
+assert.equal(TECHS.mobility.cost,16);
+assert.equal(TECHS.methodology.cost,8);
+assert.ok(canBuild(initialState(),emptyPlan(),'siege',3,1),'must research before siege');
+let state=initialState();state.research.ally.done=['training','siege','mobility','methodology'];
+assert.equal(canBuild(state,emptyPlan(),'siege',3,1),null);
+let staged=resolveTurn(state,{...emptyPlan(),builds:[{type:'siege',x:3,z:1}]},{}).state;
+assert.equal(staged.pendingRecruits.length,1);
+assert.equal(staged.pendingRecruits[0].ready,2);
+assert.equal(staged.units.filter(u=>u.team==='ally').length,2);
+assert.ok(canBuild(staged,emptyPlan(),'recruit',3,1),'busy workshop must block');
+staged=resolveTurn(staged,emptyPlan(),{}).state;
+assert.equal(staged.pendingRecruits.length,0);
+const siege=staged.units.find(u=>u.kind==='siege');
+assert.ok(siege);assert.equal(siege.hp,STATS.siege.hp);
+assert.equal(PRICE.siege,9);assert.equal(PRICE.cavalry,8);
+
+let combat=initialState();
+combat.units=[{id:'a1',team:'ally',kind:'siege',x:11,z:13,hp:8}];
+const siegeUnit=combat.units[0];
+assert.ok(targets(combat,siegeUnit).some(t=>t.kind==='base'&&t.team==='enemy'));
+assert.equal(canMove(combat,siegeUnit,12,13),null);
+const attacked=resolveTurn(combat,{...emptyPlan(),orders:{a1:{type:'attack',target:{kind:'base',team:'enemy'}}}},{}).state;
+assert.equal(attacked.enemyHP,24);
+assert.ok(canMove(combat,{id:'a2',team:'ally',kind:'cavalry',x:6,z:6,hp:9},8,6)===null);
+assert.ok(canMove(combat,{id:'a2',team:'ally',kind:'siege',x:6,z:6,hp:8},8,6));
+assert.ok(combat.units.length===1);
+
+let lab=initialState();lab.units=[];lab.research.ally.done=['methodology'];
+assert.equal(canProject(lab,emptyPlan(),{site:'home',type:'lab'},6),null);
+lab=resolveTurn(lab,{...emptyPlan(),projects:[{site:'home',type:'lab'}]},{}).state;
+assert.equal(Boolean(lab.labs?.home),false);
+assert.ok(lab.labConstruction?.home);
+assert.equal(researchRate(lab),3);
+assert.ok(canProject(lab,emptyPlan(),{site:'home',type:'lab'},6));
+lab=resolveTurn(lab,emptyPlan(),{}).state;
+assert.equal(lab.labs?.home,true);
+assert.equal(Boolean(lab.labConstruction?.home),false);
+assert.equal(researchRate(lab),4);
+
+assert.equal(MIN_ZOOM,.7);assert.equal(MAX_ZOOM,7);
+assert.equal(clampZoom(0),.7);assert.equal(clampZoom(Infinity),1);assert.equal(clampZoom(200),7);
+assert.deepEqual(gestureMetrics([{x:0,y:0},{x:40,y:30}]),{x:20,y:15,distance:50});
+assert.equal(pinchZoom(1,50,100),2);
+assert.equal(pinchZoom(6,50,100),7);
+assert.equal(pinchZoom(1,0,0),1);
+const pan=groundPan(20,10,Math.PI/4,.05);
+assert.ok(Number.isFinite(pan.x)&&Number.isFinite(pan.z));
+assert.ok(Math.abs(pan.x)+Math.abs(pan.z)>0);
+console.log('PASS: researched elite units, siege damage/range, two-turn recruitment, two-turn research facility and mobile pinch/pan maths');

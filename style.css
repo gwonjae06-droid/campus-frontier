@@ -10,3 +10,44 @@
 .view-controls #pitchLow,.view-controls #pitchHigh{width:auto;min-width:43px;padding:0 6px;font-size:10px;font-weight:700}
 #scoreBoard{display:block;color:#28563f;font-weight:750;margin:8px 0 2px}
 @media(max-width:760px){.view-controls #pitchLow,.view-controls #pitchHigh{min-width:34px;padding:0 4px;font-size:9px}.pitch-control input{width:66px}}
+
+/* v0.6: mobile-first navigation without changing the current campus palette. */
+.zoom-control{display:flex;align-items:center;gap:6px;background:#fffdf1ed;border-radius:9px;padding:4px 8px;font-size:10px;white-space:nowrap}
+.zoom-control output{font-variant-numeric:tabular-nums;min-width:30px;font-weight:700}
+.zoom-control input{width:82px;accent-color:#28563f}
+.view-controls{align-items:center}
+.view-controls #zoomIn,.view-controls #zoomOut{font-size:23px;font-weight:600;background:#e5efde}
+.tools{max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;scroll-snap-type:x proximity}
+.tools button{flex:0 0 69px;scroll-snap-align:start}
+#game>canvas{touch-action:none;user-select:none}
+@media(max-width:1050px) and (min-width:761px){
+ .bottom{gap:8px}.tools{flex:1;justify-content:flex-start}.tools button{flex:0 0 64px}.turn-action{flex:0 0 180px}
+ .zoom-control input{width:66px}
+}
+@media(max-width:760px){
+ .bottom{bottom:35px}
+ .tools{justify-content:flex-start;gap:3px;max-width:100%;-webkit-overflow-scrolling:touch;padding-bottom:7px}
+ .tools button{flex:0 0 78px!important;min-width:78px;min-height:57px}
+ .tools button>b{font-size:10px}.tools button>small{font-size:8px}
+ .view-controls{top:282px;right:10px;left:10px;max-width:none;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+ .view-controls button{height:33px;min-width:33px;width:33px;font-size:18px}
+ .view-controls #pitchLow,.view-controls #pitchHigh{min-width:40px}
+ .pitch-control,.zoom-control{height:34px;padding:4px 6px}
+ .pitch-control input{width:56px}.zoom-control input{width:65px}
+ #game{top:315px;bottom:190px}
+ #toast{bottom:198px;max-width:94%;z-index:3}
+ .map-top{top:347px;left:15px;z-index:2;pointer-events:none}
+ .turn-action{margin-top:7px}
+ footer{bottom:8px}
+}
+@media(max-width:390px){
+ .zoom-control input{width:48px}.pitch-control input{width:44px}
+ .view-controls{top:284px}
+ #game{top:320px;bottom:189px}
+}
+@media(max-height:730px) and (max-width:760px){
+ .campus-card{padding:5px 8px}.growth-button{padding:5px 7px}
+ .view-controls{top:268px}
+ #game{top:302px;bottom:175px}
+ #toast{bottom:180px}
+}

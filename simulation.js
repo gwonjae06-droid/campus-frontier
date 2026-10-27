@@ -1,11 +1,11 @@
-import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=04';
+import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,finishLabs,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=06';
 // Deterministic public-vision practice rules. Rendering never changes outcomes.
 export const SIZE=15, TURN_LIMIT=15, CENTRAL_POINT='8,9';
 export const POINT_KEYS=['8,6','6,9','6,3','3,9','11,11','12,6',CENTRAL_POINT];
-export const PRICE={wall:3,tower:7,recruit:5,scout:4};
+export const PRICE={wall:3,tower:7,recruit:5,scout:4,siege:9,cavalry:8};
 export const CAMPUS={x:2,z:2,size:3},HOME={x:3,z:3},ENEMY_BASE={x:13,z:13};
 export const GATES=[{x:3,z:1},{x:5,z:3},{x:3,z:5},{x:1,z:3}];
-export const STATS={infantry:{name:'보병',hp:10,attack:4,defense:2,move:1},scout:{name:'정찰대',hp:7,attack:2,defense:1,move:2}};
+export const STATS={infantry:{name:'보병',hp:10,attack:4,defense:2,move:1},scout:{name:'정찰대',hp:7,attack:2,defense:1,move:2,range:1},siege:{name:'공성대',hp:8,attack:3,defense:1,move:1,range:2},cavalry:{name:'기동대',hp:9,attack:4,defense:1,move:2,range:1}};
 export const key=(x,z)=>`${x},${z}`;
 export const distance=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.z-b.z);
 export const isCampus=(x,z)=>x>=2&&x<=4&&z>=2&&z<=4;
@@ -22,9 +22,9 @@ export function terrain(x,z){
 }
 export const passable=(x,z)=>Number.isInteger(x)&&Number.isInteger(z)&&['grass','resource','forest'].includes(terrain(x,z));
 export const emptyPlan=()=>({orders:{},builds:[],projects:[]});
-export function initialState(){return {version:5,turn:1,gold:10,enemyGold:10,homeHP:30,enemyHP:30,result:null,
+export function initialState(){return {version:6,turn:1,gold:10,enemyGold:10,homeHP:30,enemyHP:30,result:null,
  units:[{id:'a1',team:'ally',kind:'infantry',x:5,z:3,hp:10},{id:'a2',team:'ally',kind:'scout',x:3,z:5,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:12,z:13,hp:10},{id:'e2',team:'enemy',kind:'scout',x:13,z:12,hp:7}],
- research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},structures:[],points:Object.fromEntries(POINT_KEYS.map(k=>[k,null])),pointReady:{},nextId:3,victoryMode:null};}
+ research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},labs:{},labConstruction:{},structures:[],pendingRecruits:[],points:Object.fromEntries(POINT_KEYS.map(k=>[k,null])),pointReady:{},nextId:3,victoryMode:null};}
 export const availableGold=(s,p)=>s.gold-p.builds.reduce((n,b)=>n+PRICE[b.type],0)-reservedProjects(p);
 export const unitCap=(s,team='ally')=>Math.min(10,6+Object.entries(s.points).filter(([k,v])=>v===team&&(s.pointReady[k]??0)<=s.turn).length);
 export const income=(s,team='ally')=>5+growthIncome(s,team)+Object.entries(s.points).filter(([k,v])=>v===team&&(s.pointReady[k]??0)<=s.turn).length*2;
@@ -51,22 +51,24 @@ export function canBuild(s,p,type,x,z){
  if(!Object.hasOwn(PRICE,type))return '알 수 없는 생산입니다.';
  if(type==='wall'&&!hasTech(s,'ally','defense'))return '방어 건축 연구가 필요합니다.';
  if(type==='tower'&&!hasTech(s,'ally','towers'))return '방어 체계 연구가 필요합니다.';
+ if(type==='siege'&&!hasTech(s,'ally','siege'))return '공성 기술 연구가 필요합니다.';
+ if(type==='cavalry'&&!hasTech(s,'ally','mobility'))return '기동 전술 연구가 필요합니다.';
  if(DEPOSITS.some(d=>d.x===x&&d.z===z))return '개발 자원 타일에는 방어 시설을 설치할 수 없습니다.';
  if((p.projects??[]).some(o=>o.site==='home'))return '캠퍼스에서 자원 개발을 예약했습니다.';
- if(s.structures.some(b=>b.ready>s.turn))return '캠퍼스 작업 슬롯에서 방어탑을 건설 중입니다.';
+ if(s.structures.some(b=>b.ready>s.turn)||(s.pendingRecruits??[]).length||s.labConstruction?.home)return '캠퍼스 작업 슬롯에서 생산이 진행 중입니다.';
  if(p.builds.length)return '캠퍼스 작업 슬롯은 한 턴에 하나입니다.';
  if(!passable(x,z)||terrain(x,z)==='resource')return '빈 일반 타일을 선택하세요.';
  if(s.units.some(u=>u.x===x&&u.z===z)||s.structures.some(b=>b.x===x&&b.z===z))return '이미 점유된 타일입니다.';
- const gate=GATES.some(g=>g.x===x&&g.z===z),recruit=['recruit','scout'].includes(type);
- if(recruit){if(!gate)return '모집은 본진의 네 출전 타일에서만 가능합니다.';if(s.units.filter(u=>u.team==='ally').length>=unitCap(s))return '부대 상한에 도달했습니다.';}
+ const gate=GATES.some(g=>g.x===x&&g.z===z),recruit=['recruit','scout','siege','cavalry'].includes(type);
+ if(recruit){if(!gate)return '모집은 본진의 네 출전 타일에서만 가능합니다.';if(s.units.filter(u=>u.team==='ally').length+(s.pendingRecruits??[]).length>=unitCap(s))return '부대 상한에 도달했습니다.';}
  else {if(gate)return '본진 출전 타일에는 방어 시설을 설치할 수 없습니다.';if(x<1||x>5||z<1||z>5)return '캠퍼스 초기 영토 안에 건설하세요.';if(type==='tower'&&s.structures.filter(b=>b.type==='tower').length>=2)return '캠퍼스 방어탑은 최대 2개입니다.';}
  if(availableGold(s,p)<PRICE[type])return '사용 가능한 운영력이 부족합니다.';
  return null;
 }
 export function targets(s,u){
- const list=s.units.filter(v=>v.team!==u.team&&distance(u,v)===1).map(v=>({kind:'unit',id:v.id}));
- if(u.team==='enemy')list.push(...s.structures.filter(v=>distance(u,v)===1).map(v=>({kind:'structure',id:v.id})));
- if(u.team==='ally'?distance(u,ENEMY_BASE)===1:GATES.some(g=>distance(u,g)===0))list.push({kind:'base',team:u.team==='ally'?'enemy':'ally'});
+ const range=stats(u).range??1;const list=s.units.filter(v=>v.team!==u.team&&distance(u,v)<=range).map(v=>({kind:'unit',id:v.id}));
+ if(u.team==='enemy')list.push(...s.structures.filter(v=>distance(u,v)<=range).map(v=>({kind:'structure',id:v.id})));
+ if(u.team==='ally'?distance(u,ENEMY_BASE)<=range:GATES.some(g=>distance(u,g)<=range-1))list.push({kind:'base',team:u.team==='ally'?'enemy':'ally'});
  return list;
 }
 const sameTarget=(a,b)=>a&&b&&a.kind===b.kind&&a.id===b.id&&a.team===b.team;
@@ -74,7 +76,7 @@ export function canOrder(s,u,o,p=emptyPlan()){
  if(!u)return '부대를 선택하세요.';
  if(o.type==='move')return canMove(s,u,o.x,o.z,p);
  if(o.type==='attack')return targets(s,u).some(t=>sameTarget(t,o.target))?null:'인접한 적을 선택하세요. 본진은 접점에서 공격합니다.';
- if(o.type==='capture')return Object.hasOwn(s.points,key(u.x,u.z))&&s.points[key(u.x,u.z)]!==u.team?null:'점령할 거점 위에서 명령하세요. 이동과 같은 턴에는 점령할 수 없습니다.';
+ if(o.type==='capture')return (u.kind==='siege'?'공성대는 거점을 점령할 수 없습니다.':null)??(Object.hasOwn(s.points,key(u.x,u.z))&&s.points[key(u.x,u.z)]!==u.team?null:'점령할 거점 위에서 명령하세요. 이동과 같은 턴에는 점령할 수 없습니다.');
  if(o.type==='heal')return ownTerritory(s,u)&&u.hp<stats(u).hp?null:'회복은 피해를 입은 부대가 자기 영토에서만 가능합니다.';
  return ['guard','wait'].includes(o.type)?null:'알 수 없는 명령입니다.';
 }
@@ -107,7 +109,7 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
   const defense=target.kind==='unit'?stats(victim).defense+(terrain(victim.x,victim.z)==='forest'?1:0)+(orders[victim.id]?.type==='guard'?(hasTech(input,victim.team,'training')?2:1):0):target.kind==='structure'?1:0;
   const amount=Math.max(1,power-defense),id=target.kind==='base'?target.team:target.id;damage.set(id,(damage.get(id)??0)+amount);events.push({type:'attack',from,target,amount});
  }
- for(const u of s.units){const o=orders[u.id];if(o?.type==='attack'){if(targets(s,u).some(t=>sameTarget(t,o.target)))attack({kind:'unit',id:u.id},o.target,stats(u).attack);else events.push({type:'failed',text:`${u.id}: 공격 대상이 사거리를 벗어났습니다.`});}}
+ for(const u of s.units){const o=orders[u.id];if(o?.type==='attack'){if(targets(s,u).some(t=>sameTarget(t,o.target)))attack({kind:'unit',id:u.id},o.target,stats(u).attack+(u.kind==='siege'&&o.target.kind!=='unit'?3:0));else events.push({type:'failed',text:`${u.id}: 공격 대상이 사거리를 벗어났습니다.`});}}
  for(const b of s.structures){if(b.type!=='tower'||b.ready>s.turn)continue;const target=s.units.filter(u=>u.team==='enemy'&&distance(u,b)<=2).sort((a,c)=>distance(a,b)-distance(c,b)||a.hp-c.hp||a.id.localeCompare(c.id))[0];if(target)attack({kind:'structure',id:b.id},{kind:'unit',id:target.id},3);}
  for(const u of s.units)u.hp-=damage.get(u.id)??0;for(const b of s.structures)b.hp-=damage.get(b.id)??0;
  s.homeHP=Math.max(0,s.homeHP-(damage.get('ally')??0));s.enemyHP=Math.max(0,s.enemyHP-(damage.get('enemy')??0));
@@ -115,11 +117,12 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  for(const u of s.units){const o=orders[u.id];if(o?.type==='heal'&&!damage.has(u.id)&&ownTerritory(s,u))u.hp=Math.min(stats(u).hp,u.hp+2);
   const k=key(u.x,u.z);if(o?.type==='capture'&&Object.hasOwn(s.points,k)&&s.points[k]!==u.team){s.pointReady[k]=s.turn+(s.points[k]?2:1);s.points[k]=u.team;events.push({type:'capture',team:u.team,x:u.x,z:u.z});}}
  for(const b of plan.builds){if(s.units.some(u=>u.x===b.x&&u.z===b.z)){s.gold+=Math.floor(PRICE[b.type]/2);events.push({type:'failed',text:'생산 타일 점유로 취소 · 비용 50% 환급'});continue;}
-  if(['recruit','scout'].includes(b.type)){const kind=b.type==='scout'?'scout':'infantry';s.units.push({id:`a${s.nextId++}`,team:'ally',kind,x:b.x,z:b.z,hp:STATS[kind].hp});}
+  if(['recruit','scout','siege','cavalry'].includes(b.type)){const kind=b.type==='recruit'?'infantry':b.type;if(['siege','cavalry'].includes(kind)){s.pendingRecruits.push({kind,x:b.x,z:b.z,ready:s.turn+1});events.push({type:'production',text:`${STATS[kind].name} 훈련 시작 · 2턴`});}else s.units.push({id:`a${s.nextId++}`,team:'ally',kind,x:b.x,z:b.z,hp:STATS[kind].hp});}
   else s.structures.push({id:`s${s.nextId++}`,type:b.type,x:b.x,z:b.z,hp:10,ready:s.turn+(b.type==='tower'?2:1)});events.push({type:'build',...b});}
+ for(const pending of [...s.pendingRecruits]){if(pending.ready>s.turn)continue;if(s.units.some(u=>u.x===pending.x&&u.z===pending.z)||s.structures.some(b=>b.x===pending.x&&b.z===pending.z)){events.push({type:'production-wait',text:`${STATS[pending.kind].name} 출전 칸이 막혔습니다.`});continue;}s.units.push({id:`a${s.nextId++}`,team:'ally',kind:pending.kind,x:pending.x,z:pending.z,hp:STATS[pending.kind].hp});s.pendingRecruits.splice(s.pendingRecruits.indexOf(pending),1);events.push({type:'production',text:`${STATS[pending.kind].name} 훈련 완료`});}
  if(!s.homeHP&&!s.enemyHP)s.result='draw';else if(!s.homeHP)s.result='defeat';else if(!s.enemyHP)s.result='victory';
  if(s.result)s.victoryMode='base';
- finishProjects(s,plan.projects??[],'ally',events);finishProjects(s,growthAI.projects,'enemy',events);
+ finishProjects(s,plan.projects??[],'ally',events);finishProjects(s,growthAI.projects,'enemy',events);finishLabs(s,events);
  advanceResearch(s,input,'ally',researchChoice,events);advanceResearch(s,input,'enemy',growthAI.technology,events);
  if(!s.result&&s.enemyGold>=5&&s.units.filter(u=>u.team==='enemy').length<unitCap(s,'enemy')){const spawn=neighbors(ENEMY_BASE).find(p=>passable(p.x,p.z)&&!s.units.some(u=>distance(u,p)===0)&&!s.structures.some(b=>distance(b,p)===0));if(spawn){s.enemyGold-=5;s.units.push({id:`e${s.nextId++}`,team:'enemy',kind:'infantry',...spawn,hp:10});events.push({type:'reinforce'});}}
  s.turn++;
