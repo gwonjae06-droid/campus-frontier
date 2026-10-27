@@ -45,5 +45,5 @@ assert.ok(!board.includes('BoxGeometry(1.107,9.4,1.107)'));
 assert.ok(game.includes('function treePosition(id)'));
 assert.ok(board.includes('helper.position.set(coord(x),.025,coord(z))'));
 assert.ok(board.includes('depthWrite:true'));
-assert.ok(board.includes('visibleTiles(state,\'ally\')'));
+assert.ok(board.includes('visibleTiles(state,viewer)'));
 console.log('PASS: concise rivalry HUD, 12-tech connected skill tree, camera controls without button, volumetric fog geometry');
