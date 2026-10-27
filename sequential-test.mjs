@@ -96,4 +96,26 @@ assert.ok(board.includes("state.playerTeam??'ally'"));
 assert.ok(board.includes('state.cityLevels?.[k]'));
 assert.ok(board.includes('state.bonusResources??[]'));
 assert.ok(!home.includes("await import('./game.js?v=controls-v23')"),'old simultaneous engine must not launch');
+// Full-match stress: no pending plan object or turn snapshots are needed.
+for(const playerTeam of TEAMS){
+ let game=createSequentialGame({playerTeam,seed:54321});
+ let cycles=0;
+ while(!game.result&&cycles<31){
+  const startTurn=game.turn;
+  const next=endSequentialRound(game);
+  assert.ok(!next.error,'30 round run must never produce an invalid plan');
+  assert.equal(next.state.turn,startTurn+1,'AI phases are inside the round');
+  assert.ok(next.phases.length<=2,'exactly two AI factions at most');
+  game=next.state;
+  cycles++;
+ }
+ assert.ok(game.result,'30-round campaign must conclude');
+ assert.ok(game.turn<=31,'hard match limit is 30 rounds');
+}
+{
+ const defeated=createSequentialGame({playerTeam:'ally',seed:999});
+ defeated.homeHP=0;
+ const result=endSequentialRound(defeated);
+ assert.equal(result.state.result,'defeat','player defeat must not wait for AI-vs-AI final resolution');
+}
 console.log('PASS: sequential 3-faction ordered turns, immediate attacks, growth, OP research, university choices and seeded resources');

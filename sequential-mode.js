@@ -70,8 +70,12 @@ function clearEnemy(s,team,events){
 function finishGame(s,events){
  for(const t of TEAMS)if(s[UNIVERSITY[t].hp]<=0&&s.units.some(u=>u.team===t))clearEnemy(s,t,events);
  const living=TEAMS.filter(t=>alive(s,t));
- if(living.length<=1){
-  s.winner=living[0]??null;s.result=s.winner===s.playerTeam?'victory':s.winner?'defeat':'draw';s.victoryMode='base';
+ if(living.length===0){
+  s.winner=null;s.result='draw';s.victoryMode='base';
+ }else if(!alive(s,s.playerTeam)){
+  s.winner=living.length===1?living[0]:null;s.result='defeat';s.victoryMode='base';
+ }else if(living.length===1){
+  s.winner=living[0];s.result='victory';s.victoryMode='base';
  }else if(s.turn>TURN_LIMIT){
   const rank=TEAMS.filter(t=>alive(s,t)).map(t=>({t,score:Object.entries(s.points).reduce((sum,[k,o])=>sum+(o===t?(k==='10,10'?5:3)*(s.cityLevels[k]??1):0),0)+s[UNIVERSITY[t].hp]+Object.values(s.technologies[t]).reduce((a,b)=>a+b,0)*2}));
   rank.sort((a,b)=>b.score-a.score);
