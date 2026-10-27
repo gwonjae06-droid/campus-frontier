@@ -1,4 +1,6 @@
-import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,finishLabs,finishGrand,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=091';
+import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,finishLabs,finishGrand,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=10';
+import {visibleTiles,isVisible,rememberExploration} from './vision.js?v=10';
+import {isCeasefire,violatesCeasefire,canProposeCeasefire,resolveDiplomacy} from './diplomacy.js?v=10';
 // Deterministic public-vision practice rules. Rendering never changes outcomes.
 export const SIZE=21, TURN_LIMIT=30, CENTRAL_POINT='10,10';
 export const POINT_KEYS=['8,6','6,9','6,3','13,14','16,12','12,17',CENTRAL_POINT];
@@ -32,10 +34,11 @@ export function initialState(mode='practice'){const state={version:8,turn:1,gold
  units:[{id:'a1',team:'ally',kind:'infantry',x:5,z:3,hp:10},{id:'a2',team:'ally',kind:'scout',x:3,z:5,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:15,z:17,hp:10},{id:'e2',team:'enemy',kind:'scout',x:17,z:15,hp:7}],
  research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},labs:{},labConstruction:{},grandConstruction:null,grandCompleted:false,wideSite:null,centralPoint:CENTRAL_POINT,roads:[],structures:[],pendingRecruits:[],points:Object.fromEntries(POINT_KEYS.map(k=>[k,null])),pointReady:{},nextId:3,victoryMode:null};
  if(mode==='standard'){
-   state.version=9;state.gameMode='standard';state.rivalHP=30;state.rivalGold=10;
+   state.version=10;state.gameMode='standard';state.ceasefires={};state.rivalHP=30;state.rivalGold=10;
    state.research.rival=newResearch();state.capturePoints={ally:0,enemy:0,rival:0};
    state.units.push({id:'r1',team:'rival',kind:'infantry',x:15,z:3,hp:10},{id:'r2',team:'rival',kind:'scout',x:17,z:5,hp:7});
  }
+ rememberExploration(state);
  return state;
 }
 export const availableGold=(s,p)=>s.gold-p.builds.reduce((n,b)=>n+PRICE[b.type],0)-reservedProjects(p);
@@ -53,7 +56,7 @@ const neighbors=p=>[[1,0],[0,1],[-1,0],[0,-1]].map(([x,z])=>({x:p.x+x,z:p.z+z}))
 export function reachable(s,u,plan=emptyPlan()){
  const out=new Map(),queue=[{x:u.x,z:u.z,cost:0}];
  while(queue.length){const p=queue.shift();for(const n of neighbors(p)){
-  if(!passable(n.x,n.z)||s.structures.some(b=>b.type!=='road'&&b.x===n.x&&b.z===n.z)||plan.builds.some(b=>b.type!=='road'&&b.x===n.x&&b.z===n.z)||s.units.some(v=>v.id!==u.id&&v.x===n.x&&v.z===n.z))continue;
+  if(!passable(n.x,n.z)||violatesCeasefire(s,u.team,n.x,n.z)||s.structures.some(b=>b.type!=='road'&&b.x===n.x&&b.z===n.z)||plan.builds.some(b=>b.type!=='road'&&b.x===n.x&&b.z===n.z)||s.units.some(v=>v.id!==u.id&&v.x===n.x&&v.z===n.z))continue;
   const cost=p.cost+((s.roads??[]).includes(key(n.x,n.z))?1:['forest','hill'].includes(terrain(n.x,n.z))?2:1),k=key(n.x,n.z);
   if(distance(n,u)===0||cost>stats(u).move&&!(p.cost===0&&stats(u).move===1)||out.has(k)&&out.get(k).cost<=cost)continue;
   const node={...n,cost};out.set(k,node);if(cost<stats(u).move)queue.push(node);
@@ -82,11 +85,13 @@ export function canBuild(s,p,type,x,z){
  return null;
 }
 export function targets(s,u){
- const range=stats(u).range??1;const list=s.units.filter(v=>v.team!==u.team&&distance(u,v)<=range).map(v=>({kind:'unit',id:v.id}));
- if(u.team!=='ally')list.push(...s.structures.filter(v=>distance(u,v)<=range).map(v=>({kind:'structure',id:v.id})));
- if(u.team!=='ally'&&GATES.some(g=>distance(u,g)<=range-1))list.push({kind:'base',team:'ally'});
- if(u.team!=='enemy'&&ENEMY_GATES.some(g=>distance(u,g)<=range-1))list.push({kind:'base',team:'enemy'});
- if(s.rivalHP!==undefined&&u.team!=='rival'&&RIVAL_GATES.some(g=>distance(u,g)<=range-1))list.push({kind:'base',team:'rival'});
+ const range=stats(u).range??1,visible=visibleTiles(s,u.team);
+ const permitted=(t,x,z)=>!isCeasefire(s,u.team,t)&&isVisible(s,u.team,x,z,visible);
+ const list=s.units.filter(v=>v.team!==u.team&&distance(u,v)<=range&&permitted(v.team,v.x,v.z)).map(v=>({kind:'unit',id:v.id}));
+ if(u.team!=='ally')list.push(...s.structures.filter(v=>distance(u,v)<=range&&permitted('ally',v.x,v.z)).map(v=>({kind:'structure',id:v.id})));
+ if(u.team!=='ally'&&!isCeasefire(s,u.team,'ally')&&GATES.some(g=>distance(u,g)<=range-1&&isVisible(s,u.team,g.x,g.z,visible)))list.push({kind:'base',team:'ally'});
+ if(u.team!=='enemy'&&!isCeasefire(s,u.team,'enemy')&&ENEMY_GATES.some(g=>distance(u,g)<=range-1&&isVisible(s,u.team,g.x,g.z,visible)))list.push({kind:'base',team:'enemy'});
+ if(s.rivalHP!==undefined&&u.team!=='rival'&&!isCeasefire(s,u.team,'rival')&&RIVAL_GATES.some(g=>distance(u,g)<=range-1&&isVisible(s,u.team,g.x,g.z,visible)))list.push({kind:'base',team:'rival'});
  return list;
 }
 const sameTarget=(a,b)=>a&&b&&a.kind===b.kind&&a.id===b.id&&a.team===b.team;
@@ -113,6 +118,7 @@ export function enemyOrders(s){
 }
 export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  if(input.result)throw Error('Game has ended');
+ if(plan.diplomacy){const e=canProposeCeasefire(input,'ally',plan.diplomacy.target);if(e)throw Error(e);}
  const accepted=emptyPlan();for(const b of plan.builds){const e=canBuild(input,accepted,b.type,b.x,b.z);if(e)throw Error(e);accepted.builds.push(b);}
  for(const [id,o] of Object.entries(plan.orders)){const u=input.units.find(v=>v.id===id&&v.team==='ally');const e=canOrder(input,u,o,plan);if(e)throw Error(e);}
  const researchChoice=Object.hasOwn(plan,'research')?plan.research:input.research.ally.active;
@@ -179,6 +185,7 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  if(s.result)s.victoryMode='base';
  finishProjects(s,plan.projects??[],'ally',events);finishProjects(s,growthAI.projects,'enemy',events);if(growthRival)finishProjects(s,growthRival.projects,'rival',events);finishLabs(s,events);finishGrand(s,events);
  advanceResearch(s,input,'ally',researchChoice,events);advanceResearch(s,input,'enemy',growthAI.technology,events);if(growthRival)advanceResearch(s,input,'rival',growthRival.technology,events);
+ resolveDiplomacy(s,plan.diplomacy,events);
 
  function recruitAI(team,bank,base,gates){
   if((team==='enemy'?s.enemyHP:s.rivalHP)<=0||s[bank]<5||s.units.filter(u=>u.team===team).length>=unitCap(s,team))return;
@@ -188,6 +195,7 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  }
  if(!s.result){recruitAI('enemy','enemyGold',ENEMY_BASE,ENEMY_GATES);if(s.gameMode==='standard')recruitAI('rival','rivalGold',RIVAL_BASE,RIVAL_GATES);}
  s.turn++;
+ rememberExploration(s);
  if(!s.result&&s.turn>TURN_LIMIT){
   if(s.gameMode==='standard'){
    const teams=['ally','enemy','rival'].filter(t=>(t==='ally'?s.homeHP:t==='enemy'?s.enemyHP:s.rivalHP)>0);

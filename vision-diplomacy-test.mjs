@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import {initialState,emptyPlan,resolveTurn,targets,canMove,canOrder,enemyOrders} from './simulation.js';
+import {visibleTiles,exploredTiles,rememberExploration,tileKey} from './vision.js';
+import {isCeasefire,ceasefireUntil,canProposeCeasefire,aiAcceptsCeasefire,ownerOfTerritory} from './diplomacy.js';
+let s=initialState('standard');
+assert.equal(s.version,10);
+assert.deepEqual(Object.keys(s.explored).sort(),['ally','enemy','rival']);
+let sight=visibleTiles(s,'ally');
+assert.ok(sight.has(tileKey(3,8)),'scout must reveal a wider region');
+assert.ok(!sight.has('17,17'),'enemy base must start unexplored');
+assert.ok(!exploredTiles(s,'ally').has('17,17'),'exploration must persist separately');
+assert.ok(!targets(s,s.units.find(u=>u.id==='a1')).some(t=>t.kind==='unit'),'initial contacts should be hidden');
+assert.equal(ownerOfTerritory(s,15,17),'enemy');
+
+let contact=initialState('standard');
+contact.units=[{id:'a1',team:'ally',kind:'scout',hp:7,x:11,z:10},
+               {id:'e1',team:'enemy',kind:'infantry',hp:10,x:13,z:10}];
+rememberExploration(contact);
+assert.ok(targets(contact,contact.units[0]).some(t=>t.kind==='unit'&&t.id==='e1'));
+assert.ok(contact.lastSeen.ally.e1);
+contact.units[0].x=3;contact.units[0].z=5;
+rememberExploration(contact);
+assert.ok(contact.lastSeen.ally.e1,'last seen memory must survive retreat');
+assert.ok(!targets(contact,contact.units[0]).some(t=>t.id==='e1'),'cannot attack last-seen ghost');
+assert.ok(exploredTiles(contact,'ally').has('13,10'));
+
+assert.equal(canProposeCeasefire(s,'ally','enemy'),null);
+assert.ok(aiAcceptsCeasefire(s,'enemy'));
+let peace=resolveTurn(s,{...emptyPlan(),diplomacy:{target:'enemy'}},{}).state;
+assert.equal(peace.turn,2);
+assert.equal(ceasefireUntil(peace,'ally','enemy'),6);
+assert.ok(isCeasefire(peace,'ally','enemy'));
+assert.ok(!isCeasefire(peace,'ally','rival'));
+const ally={id:'a1',team:'ally',kind:'scout',hp:7,x:14,z:17};
+const adversary={id:'e1',team:'enemy',kind:'infantry',hp:10,x:15,z:17};
+peace.units=[ally,adversary];
+assert.ok(canMove(peace,ally,15,16),'ceasefire blocks entry into enemy territory');
+assert.ok(!targets(peace,ally).some(t=>t.kind==='unit'&&t.id==='e1'));
+assert.ok(canOrder(peace,ally,{type:'attack',target:{kind:'unit',id:'e1'}}));
+assert.ok(canProposeCeasefire(peace,'ally','enemy'),'duplicate proposal must fail');
+let illegal=initialState('standard');
+illegal.units.push({id:'a9',team:'ally',kind:'scout',hp:7,x:15,z:16});
+assert.ok(canProposeCeasefire(illegal,'ally','enemy'));
+assert.throws(()=>resolveTurn(illegal,{...emptyPlan(),diplomacy:{target:'enemy'}},{}));
+
+let expired=resolveTurn(s,{...emptyPlan(),diplomacy:{target:'enemy'}},{}).state;
+for(let t=3;t<=7;t++)expired=resolveTurn(expired,emptyPlan(),{}).state;
+assert.equal(expired.turn,7);
+assert.equal(isCeasefire(expired,'ally','enemy'),false);
+assert.ok(enemyOrders(expired).e1,'AI should still play after truce expires');
+console.log('PASS: fog visibility and exploration memory, last-seen contacts, bilateral five-turn ceasefire and blocked combat/territory');

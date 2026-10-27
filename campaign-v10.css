@@ -1,0 +1,15 @@
+/* v1.0 exploration and diplomacy overlay, retaining floating HUD. */
+#fogStatus{display:inline-flex;align-items:center;color:#3c5c4e;font-size:10px;
+ font-variant-numeric:tabular-nums;background:#e3ecde;border-radius:8px;padding:3px 6px}
+.diplomacy-button{background:linear-gradient(115deg,#e6eadd,#d8e7e4)!important;border:1px solid #bfcec7!important}
+.diplomacy-status{white-space:pre-wrap;line-height:1.7;font-size:12px;color:#365343;
+ background:#eef3ea;border-radius:12px;padding:12px;margin:10px 0 16px}
+#diplomacyDialog .dialog-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:stretch}
+#diplomacyDialog [data-truce]{flex:1 1 170px;min-height:48px;padding:10px;border-radius:10px}
+#diplomacyDialog p{font-size:12px;line-height:1.8}
+@media(max-width:760px){
+ .map-top #fogStatus{font-size:9px;padding:2px 4px}
+ .map-top{max-width:52%;gap:4px}
+ #diplomacyDialog{width:min(94vw,530px);max-height:82dvh;overflow-y:auto}
+ #diplomacyDialog [data-truce]{font-size:12px}
+}
