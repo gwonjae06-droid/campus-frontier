@@ -44,7 +44,7 @@ for(const aspect of [.6,1,1.78]){
 const board=readFileSync('board.js','utf8'),html=readFileSync('index.html','utf8'),game=readFileSync('game.js','utf8'),css=readFileSync('fixed-isometric-v17.css','utf8');
 assert.ok(board.includes('swipePan(down.startTarget,dx,dy,angle,pitch,worldPerPixel'),'single-pointer swipe must pan');
 assert.ok(board.includes('swipePan(gesture.startTarget,m.x-gesture.x,m.y-gesture.y'),'two-pointer drag must pan');
-assert.ok(board.includes('if(Math.hypot(dx,dy)>7)down.moved=true'),'tap vs swipe threshold');
+assert.ok(board.includes('if(Math.hypot(dx,dy)>10)down.moved=true'),'tap vs swipe threshold');
 assert.ok(board.includes("if(!moved){const hit=pick(e);if(hit)onPick(hit);}"),'taps still select targets');
 assert.ok(board.includes('zoom=pinchZoom(gesture.startZoom,gesture.distance,m.distance)'),'pinch zoom must persist');
 assert.ok(board.includes('function setPitch(')&&!board.includes('function rotate('));

@@ -53,7 +53,7 @@ const board=readFileSync('board.js','utf8'),app=readFileSync('game.js','utf8'),h
 assert.ok(board.includes("camera.js?v=22")&&board.includes("campus.js?v=22"));
 assert.ok(board.includes('orthographicPixelScales'));
 assert.ok(board.includes('defaultZoom()'));
-assert.ok(app.includes("board.js?v=22"));
-assert.ok(html.includes("game.js?v=olympus-v22"));
+assert.ok(app.includes("board.js?v=23"));
+assert.ok(html.includes("game.js?v=controls-v23"));
 assert.ok(html.includes('arenaRoot'),'single 3D launcher is available');
 console.log('PASS: distortion-free orthographic scaling across 8 aspect ratios and 6 zoom levels');

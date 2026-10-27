@@ -56,7 +56,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   box(world,SIZE*1.14,.14,SIZE*1.14,'#c3cbbd',0,-.4,0);
   function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58,488);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(3.65,.642,1);world.add(s);return s;}
   const labels=[label('성균관대 · 56동',coord(3.5),1.5,coord(2),'#285e46'),label('고려대 · 172동',coord(16.5),1.5,coord(17),'#a9624c'),label('연세대 · 232동',coord(16.5),1.5,coord(3),'#506d9d'),label('중앙 거점 · 5점',coord(10),1.65,coord(10),'#a6782a')];
-  let dynamic=new T.Group(),preview=new T.Group();world.add(dynamic,preview);let unitMeshes=new Map(),currentState=null;
+  let dynamic=new T.Group(),preview=new T.Group();world.add(dynamic,preview);let unitMeshes=new Map(),currentState=null,currentMode='move';
   function cleanup(g){g.traverse(o=>{o.geometry?.dispose();if(o.material&&!materials.has(o.material.color?.getStyle())){if(o.userData.ownMaterial){o.material.map?.dispose();o.material.dispose();}}});world.remove(g);}
   function unitBadge(u,g){
     const c=document.createElement('canvas');c.width=320;c.height=78;const ctx=c.getContext('2d');
@@ -69,7 +69,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   function createUnit(u,parent){const g=unitModel(u,box,cone,mat);g.position.set(coord(u.x),0,coord(u.z));if(u.id!=='planned')unitBadge(u,g);parent.add(g);return g;}
   function structure(s,parent,ghost=false){const g=new T.Group();g.position.set(coord(s.x),ghost?.04:0,coord(s.z));if(s.type==='wall'){box(g,.96,.48,.45,ghost?'#e6ca83':'#d8cfb4',0,.24,0);for(let i=-1;i<=1;i++)box(g,.2,.18,.48,'#e9dfc3',i*.34,.57,0);}else if(['recruit','scout','siege','cavalry'].includes(s.type)){const kind=s.type==='recruit'?'infantry':s.type;createUnit({id:'planned',team:'ally',kind,hp:stats({kind}).hp,x:0,z:0},g).position.set(0,0,0);}else{box(g,.54,.8,.54,ghost?'#e4c984':'#d9d1b8',0,.4,0);cone(g,.5,.4,'#396e54',0,1,0,4);flag(g,.2,1,.1,'#3ca572');}if(ghost)g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.6;o.userData.ownMaterial=true;}});parent.add(g);}
   function marker(parent,x,z,color,y=.025){const m=new T.Mesh(new T.BoxGeometry(1.02,.035,1.02),new T.MeshBasicMaterial({color,transparent:true,opacity:.45,depthWrite:false}));m.position.set(coord(x),y,coord(z));m.userData.ownMaterial=true;parent.add(m);}
-  function sync(state,plan,selected,mode){currentState=state;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||explored.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||explored.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
+  function sync(state,plan,selected,mode){currentState=state;currentMode=mode;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||explored.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||explored.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
     for(const [id,o] of Object.entries(plan.orders)){const u=state.units.find(u=>u.id===id);if(!u)continue;if(o.type!=='move')marker(preview,u.x,u.z,o.type==='attack'?'#e09569':'#8cbccc');if(o.type==='move'){marker(preview,o.x,o.z,'#e9b84e');const line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(coord(u.x),.16,coord(u.z)),new T.Vector3(coord(o.x),.16,coord(o.z))]),new T.LineBasicMaterial({color:'#bd8c2d'}));line.userData.ownMaterial=true;preview.add(line);}}
     const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move'){
  for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');
@@ -113,7 +113,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     }else{tent.visible=true;rivalCampus.visible=true;}
   }
   function resize(){const rect=container.getBoundingClientRect();w=Math.max(1,rect.width);h=Math.max(1,rect.height);renderer.setSize(w,h);const span=mapHalfSpan(SIZE,1.12,pitch,angle,w/h);camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.zoom=zoom;const pos=orbitPosition(angle,pitch,target);camera.position.set(pos.x,pos.y,pos.z);camera.lookAt(target);camera.updateProjectionMatrix();onViewChange?.(pitch,zoom);}new ResizeObserver(resize).observe(container);resize();
-  const ray=new T.Raycaster(),pointer=new T.Vector2();function pick(e){const r=container.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);const unitHit=ray.intersectObjects([...unitMeshes.values()],true)[0];if(unitHit){let node=unitHit.object;while(node&&!node.userData.unitId)node=node.parent;const u=currentState?.units.find(u=>u.id===node?.userData.unitId);if(u)return {x:u.x,z:u.z};}if(focus){const building=ray.intersectObjects([...campus.picks,...korea.picks,...yonsei.picks])[0];if(building)return {building:building.object.userData.building};}const hit=ray.intersectObjects(tilePicks)[0];return hit?.object.userData.tile;}
+  const ray=new T.Raycaster(),pointer=new T.Vector2();function pick(e){const r=container.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);const unitHit=ray.intersectObjects([...unitMeshes.values()],true)[0];if(unitHit){let node=unitHit.object;while(node&&!node.userData.unitId)node=node.parent;const u=currentState?.units.find(u=>u.id===node?.userData.unitId);if(u)return {x:u.x,z:u.z};}if(focus&&currentMode==='inspect'){const building=ray.intersectObjects([...campus.picks,...korea.picks,...yonsei.picks])[0];if(building)return {building:building.object.userData.building};}const hit=ray.intersectObjects(tilePicks)[0];return hit?.object.userData.tile;}
   const canvas=renderer.domElement;canvas.style.touchAction='none';
   const pointers=new Map();let down=null,gesture=null,gestureEnded=false;
   function pointerPos(e){return {x:e.clientX,y:e.clientY};}
@@ -125,16 +125,16 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   }
   function panFromGesture(m){
     const pixelWorld=1/orthographicPixelScales(SIZE,1.12,pitch,gesture.angle,w,h,gesture.startZoom).x;
-    const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
+    const lower=coord(0),upper=coord(SIZE-1);
     const next=swipePan(gesture.startTarget,m.x-gesture.x,m.y-gesture.y,angle,pitch,pixelWorld,{min:lower,max:upper});
     target.x=next.x;target.z=next.z;
   }
   canvas.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='mouse'&&e.button!==0)return;
+    if(e.pointerType==='mouse'&&![0,1,2].includes(e.button))return;
     e.preventDefault();pointers.set(e.pointerId,pointerPos(e));
     try{canvas.setPointerCapture(e.pointerId);}catch{}
     if(pointers.size>=2)beginGesture();
-    else if(!gesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,startTarget:target.clone(),startZoom:zoom,moved:false};
+    else if(!gesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,startTarget:target.clone(),startZoom:zoom,button:e.button,moved:false};
   });
   canvas.addEventListener('pointermove',e=>{
     if(!pointers.has(e.pointerId))return;
@@ -146,10 +146,10 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     }
     if(gesture||!down||e.pointerId!==down.id)return;
     const dx=e.clientX-down.x,dy=e.clientY-down.y;
-    if(Math.hypot(dx,dy)>7)down.moved=true;
+    if(Math.hypot(dx,dy)>10)down.moved=true;
     if(down.moved){
       const worldPerPixel=1/orthographicPixelScales(SIZE,1.12,pitch,angle,w,h,down.startZoom).x;
-      const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
+      const lower=coord(0),upper=coord(SIZE-1);
       const next=swipePan(down.startTarget,dx,dy,angle,pitch,worldPerPixel,{min:lower,max:upper});
       target.x=next.x;target.z=next.z;
       resize();
@@ -158,7 +158,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   function finishPointer(e,canceled=false){
     if(!pointers.has(e.pointerId))return;
     const eligible=!canceled&&!gesture&&!gestureEnded&&down?.id===e.pointerId;
-    const moved=!eligible||down.moved||Math.hypot(e.clientX-down.x,e.clientY-down.y)>7;
+    const moved=!eligible||down.button!==0||down.moved||Math.hypot(e.clientX-down.x,e.clientY-down.y)>10;
     pointers.delete(e.pointerId);
     if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
     down=null;
@@ -166,10 +166,13 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     if(!moved){const hit=pick(e);if(hit)onPick(hit);}
     else onDragEnd?.();
   }
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
   canvas.addEventListener('pointerup',e=>finishPointer(e));
   canvas.addEventListener('pointercancel',e=>finishPointer(e,true));
   canvas.addEventListener('lostpointercapture',e=>{pointers.delete(e.pointerId);if(!pointers.size){gesture=null;gestureEnded=false;down=null;}});
   canvas.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom-e.deltaY*.0018)},{passive:false});
+  function panBy(dx,dy){const scale=1/orthographicPixelScales(SIZE,1.12,pitch,angle,w,h,zoom).x;const next=swipePan(target,dx,dy,angle,pitch,scale,{min:coord(0),max:coord(SIZE-1)});target.x=next.x;target.z=next.z;resize();}
+  function focusUnit(u){target.set(coord(u.x),0,coord(u.z));zoom=Math.max(zoom,2.5);resize();}
   function setPitch(value){pitch=clampPitch(value);resize();}
   function resetView(){pitch=DEFAULT_PITCH;angle=DEFAULT_ANGLE;setFocus(false);}
   function setFocus(value,school='skku'){focus=value;const center=school==='korea'?[16.5,16.5]:school==='yonsei'?[16.5,3.5]:[3.5,3.5];zoom=value?4.4:defaultZoom();target=value?new T.Vector3(coord(center[0]),.25,coord(center[1])):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
@@ -181,5 +184,5 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     await new Promise(resolve=>setTimeout(resolve,400));cleanup(flashes);onPhase('정산');await new Promise(resolve=>setTimeout(resolve,200));
   }
   function render(){requestAnimationFrame(render);if(document.body.classList.contains('in-battle'))renderer.render(scene,camera)}render();
-  return {sync,setFocus,setPitch,setZoom,resetView,zoomBy,animate,campusCount:campus.group.userData.buildingCount,rivalCounts:{korea:korea.group.userData.buildingCount,yonsei:yonsei.group.userData.buildingCount}};
+  return {sync,panBy,focusUnit,setFocus,setPitch,setZoom,resetView,zoomBy,animate,campusCount:campus.group.userData.buildingCount,rivalCounts:{korea:korea.group.userData.buildingCount,yonsei:yonsei.group.userData.buildingCount}};
 }

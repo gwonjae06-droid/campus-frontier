@@ -17,3 +17,5 @@
 .battle-legend button{pointer-events:auto;background:transparent;font-size:inherit;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
 
 #battlefield header button{white-space:nowrap!important;min-width:46px!important;width:auto!important}#battlefield #viewPanel label,#battlefield #viewPanel output{color:#304d52!important}#battlefield #viewPanel label span{color:#304d52!important}
+
+.pc-keys{border-top:1px solid #cfc7b6;margin-top:16px;padding-top:10px}.pc-keys p{line-height:1.9;font-size:13px}.pc-keys b{color:#264e56}#battlefield footer{font-size:10px!important}#game canvas{cursor:crosshair}#game canvas:active{cursor:grabbing}

@@ -8,7 +8,7 @@ function home(){battlefield.hidden=true;battlefield.inert=true;root.hidden=false
 async function enter(){
  if(loading)return;if(failed){location.reload();return;}loading=true;const button=document.getElementById('enterBattle');button.disabled=true;button.textContent='전장을 준비하는 중…';
  root.hidden=true;battlefield.hidden=false;battlefield.inert=false;document.body.classList.add('in-battle');
- try{if(!loaded){await import('./game.js?v=olympus-v22');loaded=true;}document.getElementById('panelToggle').focus();}
+ try{if(!loaded){await import('./game.js?v=controls-v23');loaded=true;}document.getElementById('panelToggle').focus();}
  catch(error){failed=true;home();document.getElementById('resumeNote').textContent='전장을 불러오지 못했습니다. 새로고침 후 다시 시도하세요.';console.error(error);}
  finally{loading=false;button.disabled=false;button.textContent=failed?'새로고침':'3D 전장 입장';}
 }
