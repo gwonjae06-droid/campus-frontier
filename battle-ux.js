@@ -27,7 +27,7 @@ export function createBattleUX(root,getState){
  const skip=el('button','seq-playback-skip','건너뛰기');skip.type='button';
  playback.append(phase,speed,skip);
  root.append(unit,sheet,playback);
- let log=[],session='',factor=1,skipped=false;
+ let log=[],session='',factor=1,skipped=false,lastSelected=null;
  function load(state){
    const id=state.playerTeam+':'+state.seed;
    if(id===session)return;
@@ -49,7 +49,7 @@ export function createBattleUX(root,getState){
    log=log.slice(-70);save();
  }
  function render(state,selected){
-   if(!state)return;load(state);
+   if(!state)return;lastSelected=selected;load(state);
    const own=publicScore(state,state.playerTeam);
    button.textContent='전황 · '+own.total+'점';
    scores.replaceChildren();
@@ -91,7 +91,7 @@ export function createBattleUX(root,getState){
    sheet.hidden=!open;button.setAttribute('aria-expanded',String(open));
    unit.classList.toggle('seq-covered',open);
  }
- button.onclick=()=>{setOpen(sheet.hidden);render(getState(),null);};
+ button.onclick=()=>{setOpen(sheet.hidden);render(getState(),lastSelected);};
  close.onclick=()=>setOpen(false);
  speed.onclick=()=>{factor=factor===1?2:1;speed.textContent=factor+'×';};
  skip.onclick=()=>{skipped=true;skip.disabled=true;phase.textContent='최종 전황 적용 중';};
