@@ -1,0 +1,187 @@
+/* Campus Frontier v0.7 — immersive full-screen, floating controls.
+   The existing 3D gameplay and unit/camera logic remain untouched. */
+:root { --hud-ink:#294533; --hud-green:#28563f; --hud-paper:rgba(255,253,246,.87);
+  --hud-stroke:rgba(255,255,255,.72); --hud-shadow:0 12px 38px rgba(22,42,29,.17); }
+html,body { width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none; }
+body { background:#e3ebe1; }
+body::after { content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(29,55,37,.07),transparent 17%,transparent 75%,rgba(26,53,38,.14)); }
+#game { position:fixed!important;inset:0!important;width:100%;height:100dvh;z-index:0;overflow:hidden; }
+#game canvas {display:block;width:100%;height:100%;touch-action:none;user-select:none}
+#loading {top:45%;z-index:2}
+header,aside,.map-top,.view-controls,.quick-actions,.bottom,#toast,footer {position:fixed;z-index:20}
+header {inset:14px 16px auto!important;width:auto!important;height:auto!important;background:none!important;
+  padding:0!important;display:flex;align-items:center;gap:8px;pointer-events:none; }
+header>* {pointer-events:auto}
+header .brand,header .resources,header #help,header #panelToggle,
+aside,.map-top,.view-controls>.view-panel,.view-controls>.view-launch,
+.bottom,.quick-actions,#toast {
+  background:var(--hud-paper);border:1px solid var(--hud-stroke);
+  box-shadow:var(--hud-shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+header .brand {display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:7px 13px 7px 7px;
+  border-radius:15px;font-size:18px;letter-spacing:-.7px;min-height:48px}
+header .brand small{font-size:7px;letter-spacing:1.3px;margin-top:1px}
+header .emblem{padding:7px 10px;font-size:22px;border-radius:10px}
+header .match{display:none}
+header .resources{border-radius:15px;margin-left:auto;padding:6px 13px;min-height:48px;gap:14px;display:flex}
+header .resources span{display:flex;flex-direction:column;gap:1px;font-size:9px;color:#758575;white-space:nowrap}
+header .resources b{font-size:16px;margin:0;color:#28543e;font-variant-numeric:tabular-nums;line-height:1.2}
+header #help,header #panelToggle{width:46px;height:46px;border-radius:13px;background:var(--hud-paper);
+  color:#28543e;display:grid;place-items:center;font-size:18px;font-weight:800;flex-shrink:0;}
+header #panelToggle[aria-expanded="true"]{background:#28563f;color:#fff8e3;}
+aside {top:78px;left:16px;bottom:125px;width:286px;padding:15px;overflow-y:auto;overflow-x:hidden;
+  border-radius:19px;scrollbar-width:thin;transition:transform .23s ease,opacity .23s ease;
+  display:block;pointer-events:auto;}
+aside>.eyebrow{display:block;font-size:9px}
+aside>h1{display:none}
+aside .campus-card{background:rgba(220,231,216,.72);border-radius:13px;padding:12px}
+aside .mission{display:block;padding:14px 0}
+aside .mission p{font-size:12px;line-height:1.55;margin:6px 0 10px}
+aside .mission small{display:block}
+aside #selection{display:block;padding:12px 0}
+aside #selection h2{font-size:14px}
+aside .queue-heading{display:flex}
+aside #orders{display:block;max-height:145px}
+aside #reset{display:block}
+aside .growth-button{border-radius:10px;margin:9px 0;padding:11px;background:#d4e4d9}
+aside .army{display:block;background:transparent;padding:0}
+aside .army .queue-heading{display:flex}
+aside .unit-actions{display:flex;gap:5px;flex-wrap:wrap}
+aside .unit-actions button{flex:1 1 44px;min-height:37px}
+aside .credits-link{display:block;margin:14px auto 1px;text-align:center;background:transparent;font-size:10px;text-decoration:underline;color:#69816b}
+body:not(.panel-open) aside{transform:translateX(calc(-100% - 28px));opacity:0;pointer-events:none}
+.map-top{top:83px;left:16px;display:flex;align-items:center;gap:8px;padding:9px 12px;
+  border-radius:10px;z-index:8;background:rgba(255,253,246,.74);border:1px solid #ffffffa6;
+  box-shadow:0 6px 18px #223b2820;pointer-events:none}
+body.panel-open .map-top{left:318px}
+.map-top small{border:0;padding-left:0}
+.map-top button{pointer-events:auto}
+.view-controls{top:83px;right:16px;left:auto;display:flex;align-items:center;gap:6px;
+  flex-wrap:nowrap;z-index:23;max-width:none}
+.view-controls>.view-launch,.view-controls>.zoom-shortcut{height:42px!important;width:42px!important;min-width:42px;
+  font-size:19px;border-radius:12px;background:var(--hud-paper);display:grid;place-items:center;
+  color:var(--hud-green);box-shadow:0 6px 22px #1d302523;border:1px solid #ffffffbd}
+.view-controls>.view-launch[aria-expanded="true"]{background:var(--hud-green);color:#fff8e3}
+.view-controls>.zoom-shortcut{font-size:24px!important;font-weight:650;background:rgba(235,244,230,.95)}
+.view-controls>.view-panel{position:absolute;top:51px;right:0;width:258px;padding:11px;
+  border-radius:15px;display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+body:not(.camera-open) .view-panel{display:none}
+.view-panel .pitch-control,.view-panel .zoom-control{width:100%;justify-content:space-between;display:flex;
+  border-radius:10px;padding:6px 9px;background:#f5f7ef;box-shadow:none;min-height:42px;font-size:11px}
+.view-panel .pitch-control input,.view-panel .zoom-control input{flex:1;min-width:20px;width:auto;max-width:122px}
+.view-panel>button{width:auto!important;min-width:42px;height:38px!important;flex:1 1 auto;
+  border-radius:10px;font-size:15px;background:#edf2e7}
+.view-panel>#pitchLow,.view-panel>#pitchHigh{min-width:56px;font-size:11px;font-weight:750}
+.bottom{bottom:15px;left:50%;right:auto;transform:translateX(-50%);width:min(940px,calc(100vw - 32px));
+  max-width:none;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:8px 10px;border-radius:19px}
+.bottom .tools{background:transparent;border:0;box-shadow:none;padding:0;min-width:0;flex:1;
+  gap:2px;overflow-x:auto;justify-content:flex-start;scrollbar-width:thin;border-radius:12px}
+.bottom .tools button{width:auto!important;min-width:67px;flex:0 0 67px!important;padding:7px 4px;
+  min-height:55px;border-radius:10px;transition:background .16s ease}
+.bottom .tools button>span{font-size:19px}
+.bottom .tools button>b{font-size:10px}
+.bottom .tools button>small{font-size:8px}
+.bottom .tools button.active{background:#28563f;color:#fff9e8}
+.bottom .turn-action{width:190px;min-width:160px;flex:0 0 190px;display:block;margin:0}
+.bottom .primary{height:51px;font-size:13px;border-radius:11px;padding:11px 13px}
+.bottom .turn-action>small{display:none}
+.bottom .mobile-plan{display:none}
+.quick-actions{left:50%;bottom:103px;transform:translateX(-50%);display:none;gap:5px;
+  padding:5px;border-radius:15px;max-width:calc(100vw - 20px)}
+body.unit-selected .quick-actions{display:flex}
+.quick-actions button{background:transparent;padding:9px 12px;border-radius:10px;min-width:56px;min-height:39px;
+  font-size:11px;font-weight:750;white-space:nowrap}
+.quick-actions button:hover:not(:disabled){background:#e3ebdd}
+.quick-actions button:disabled{opacity:.45}
+#toast{bottom:160px;left:50%;transform:translateX(-50%);white-space:normal;
+  max-width:min(540px,calc(100vw - 24px));width:max-content;padding:9px 14px;border-radius:13px;
+  font-size:11px;line-height:1.5;text-align:center;pointer-events:none;z-index:19}
+body.unit-selected #toast{bottom:160px}
+footer{bottom:0;left:20px;right:20px;display:flex;gap:10px;justify-content:space-between;
+  pointer-events:none;font-size:8px;z-index:5}
+footer>*{pointer-events:auto}
+footer button{font-size:9px;text-decoration:underline}
+dialog{z-index:60;border:1px solid #fffef3;box-shadow:0 20px 70px #1d3c2d55}
+dialog::backdrop{background:rgba(22,45,34,.53)}
+button{touch-action:manipulation}
+@media(max-width:1050px) and (min-width:761px){
+ aside{width:252px}
+ body.panel-open .map-top{left:282px}
+ .bottom{width:min(840px,calc(100vw - 28px))}
+ .bottom .tools button{min-width:64px;flex-basis:64px!important}
+}
+@media(max-width:760px){
+ header{inset:10px 10px auto!important;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+ header .brand{order:0;font-size:15px;min-height:40px;padding:4px 10px 4px 5px}
+ header .emblem{font-size:19px;padding:5px 8px}
+ header .brand small{font-size:6px}
+ header #help{order:1;margin-left:auto;height:39px;width:39px;font-size:15px}
+ header #panelToggle{order:2;height:39px;width:58px;font-size:12px}
+ header .resources{order:3;flex:1 0 100%;margin-left:0;min-height:39px;display:flex;
+   align-items:center;justify-content:space-around;padding:5px 11px;gap:7px}
+ header .resources span{flex:1;display:flex;flex-direction:row;justify-content:center;align-items:center;gap:5px;font-size:9px}
+ header .resources b{font-size:13px}
+ aside{top:106px;bottom:131px;left:9px;width:min(335px,calc(100vw - 18px));max-height:calc(100dvh - 246px);
+  border-radius:15px;z-index:32;padding:12px;overflow-y:auto;pointer-events:auto}
+ aside>.eyebrow{display:none}
+ aside .campus-card{pointer-events:auto;padding:9px}
+ aside .campus-meta{display:flex;text-align:left;border-top:1px solid #c5d1bc;margin-top:7px;padding-top:7px}
+ aside .campus-meta button{display:inline-block;margin:0}
+ aside .mission{display:block;padding:10px 0}
+ aside .mission p{font-size:11px;margin:4px 0 7px}
+ aside .army{pointer-events:auto;padding:0;background:transparent}
+ aside #roster{max-height:none;overflow:visible;display:flex}
+ aside .army .queue-heading, aside .queue-heading{display:flex}
+ aside #selection{display:block;padding:9px 0}
+ aside #orders{display:block;max-height:155px}
+ aside #reset{display:block}
+ aside .growth-button{pointer-events:auto}
+ body.panel-open .map-top{left:10px}
+ .map-top{top:112px;left:10px;max-width:45%;padding:7px 9px;font-size:10px}
+ .map-top small{display:none}
+ .view-controls{top:108px;right:10px;left:auto;max-width:none;display:flex;gap:5px;flex-wrap:nowrap}
+ .view-controls>.view-launch,.view-controls>.zoom-shortcut{width:39px!important;min-width:39px;height:39px!important;font-size:18px}
+ .view-controls>.view-panel{right:0;top:46px;width:min(280px,calc(100vw - 20px))}
+ .view-panel button{height:40px!important}
+ .bottom{bottom:max(8px,env(safe-area-inset-bottom));left:8px;right:8px;transform:none;
+  width:auto;max-width:none;display:flex;flex-direction:column;align-items:stretch;gap:5px;
+  padding:7px 8px;border-radius:16px}
+ .bottom .tools{flex:0 0 auto;width:100%;justify-content:flex-start;gap:2px;padding-bottom:1px}
+ .bottom .tools button{flex:0 0 66px!important;width:66px!important;min-width:66px!important;min-height:51px;
+   padding:5px 3px;border-radius:9px}
+ .bottom .tools button>span{font-size:18px}
+ .bottom .tools button>b{font-size:9px}
+ .bottom .tools button>small{font-size:7px}
+ .bottom .turn-action{display:grid;grid-template-columns:96px 1fr;gap:6px;width:100%;min-width:0;flex:none;margin:0}
+ .bottom .mobile-plan{display:block;height:42px;border-radius:10px;font-size:11px}
+ .bottom .primary{height:42px;font-size:12px;padding:10px 14px}
+ .bottom .turn-action>small{display:none}
+ .quick-actions{bottom:calc(121px + env(safe-area-inset-bottom));width:auto;max-width:calc(100vw - 18px);
+  padding:5px;gap:3px;border-radius:13px;z-index:23}
+ .quick-actions button{padding:9px 11px;font-size:11px;min-width:60px;min-height:38px}
+ #toast,body.unit-selected #toast{bottom:calc(177px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px);
+   font-size:10px;padding:7px 11px;line-height:1.4}
+ body:not(.unit-selected) #toast{bottom:calc(125px + env(safe-area-inset-bottom))}
+ footer{display:none}
+}
+@media(max-width:370px){
+ header .brand{font-size:13px}
+ header .brand small{letter-spacing:.6px}
+ .view-controls>.view-launch,.view-controls>.zoom-shortcut{min-width:34px;width:34px!important}
+ .map-top{max-width:35%}
+ .quick-actions button{padding:8px 8px;min-width:55px}
+}
+@media(max-height:620px) and (max-width:760px){
+ aside{top:95px;bottom:113px;max-height:calc(100dvh - 208px)}
+ .map-top,.view-controls{top:103px}
+ .bottom .tools button{min-height:43px}
+ .bottom .primary,.bottom .mobile-plan{height:38px}
+ .quick-actions{bottom:113px}
+ #toast,body.unit-selected #toast{bottom:160px}
+ body:not(.unit-selected) #toast{bottom:116px}
+}
+@media(prefers-reduced-motion:reduce){
+ aside,.bottom .tools button{transition:none}
+}
