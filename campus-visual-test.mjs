@@ -27,7 +27,8 @@ for(const which of ['yonsei','korea']){
  assert.ok(model.picks.every(o=>typeof o.userData.building.n==='string'));
 }
 const board=readFileSync('board.js','utf8');
-assert.ok(board.includes("const korea=makeRivalCampus('korea'),yonsei=makeRivalCampus('yonsei')"));
+assert.ok(board.includes("makeCampus(rivalData.korea)"));
+assert.ok(board.includes("makeCampus(rivalData.yonsei)"));
 assert.ok(board.includes('fog.frustumCulled=false'));
 assert.ok(board.includes("g.visible=state.gameMode!=='standard'||visible.has(k)"));
 assert.ok(board.includes('transparent:false'));

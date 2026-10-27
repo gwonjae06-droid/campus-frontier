@@ -1,15 +1,15 @@
 import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=05';
 import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
-import {SIZE,terrain,isCampus,key,stats,reachable,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
+import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
 import {makeCampus} from './campus.js';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
 export const coord=n=>(n-(SIZE-1)/2)*1.12;
-export function createBoard(container,data,onPick,onDragEnd,onViewChange){
+export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalData={}){
   const scene=new T.Scene();scene.background=new T.Color('#e9eee4');const world=new T.Group();scene.add(world);
-  const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;container.append(renderer.domElement);
+  const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,matchMedia('(max-width:760px)').matches?1.5:2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;container.append(renderer.domElement);
   const camera=new T.OrthographicCamera(-15,15,15,-15,.01,150),materials=new Map(),tilePicks=[];let pitch=DEFAULT_PITCH,angle=Math.PI/4,zoom=1,focus=false,target=new T.Vector3(),w=1,h=1;
   scene.add(new T.HemisphereLight(0xffffff,0x829276,2));const sun=new T.DirectionalLight(0xfff2d8,2.8);sun.position.set(-12,26,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:70});sun.shadow.normalBias=.015;scene.add(sun);
   function mat(c){if(!materials.has(c))materials.set(c,new T.MeshStandardMaterial({color:c,roughness:.85}));return materials.get(c);}
@@ -29,7 +29,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   const campus=makeCampus(data);campus.group.position.set(coord(3.5),0,coord(3.5));world.add(campus.group);
   const outline=new T.LineLoop(new T.BufferGeometry().setFromPoints([new T.Vector3(-2.18,.07,-2.18),new T.Vector3(2.18,.07,-2.18),new T.Vector3(2.18,.07,2.18),new T.Vector3(-2.18,.07,2.18)]),new T.LineBasicMaterial({color:'#e4be65'}));campus.group.add(outline);
   flag(world,coord(4)+.42,.25,coord(4)+.42,'#24855f');
-  const korea=makeRivalCampus('korea'),yonsei=makeRivalCampus('yonsei');
+  const korea=rivalData.korea?.buildings?.length?makeCampus(rivalData.korea):makeRivalCampus('korea'),yonsei=rivalData.yonsei?.buildings?.length?makeCampus(rivalData.yonsei):makeRivalCampus('yonsei');
   const tent=korea.group,rivalCampus=yonsei.group;
   tent.position.set(coord(16.5),0,coord(16.5));rivalCampus.position.set(coord(16.5),0,coord(3.5));
   world.add(tent,rivalCampus);
@@ -43,7 +43,14 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   function marker(parent,x,z,color,y=.025){const m=new T.Mesh(new T.BoxGeometry(1.02,.035,1.02),new T.MeshBasicMaterial({color,transparent:true,opacity:.45,depthWrite:false}));m.position.set(coord(x),y,coord(z));m.userData.ownMaterial=true;parent.add(m);}
   function sync(state,plan,selected,mode){currentState=state;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||visible.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||visible.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
     for(const [id,o] of Object.entries(plan.orders)){const u=state.units.find(u=>u.id===id);if(!u)continue;if(o.type!=='move')marker(preview,u.x,u.z,o.type==='attack'?'#e09569':'#8cbccc');if(o.type==='move'){marker(preview,o.x,o.z,'#e9b84e');const line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(coord(u.x),.16,coord(u.z)),new T.Vector3(coord(o.x),.16,coord(o.z))]),new T.LineBasicMaterial({color:'#bd8c2d'}));line.userData.ownMaterial=true;preview.add(line);}}
-    const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move')for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');}
+    const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move'){
+ for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');
+ for(const t of targets(state,u)){
+  const enemy=t.kind==='unit'?state.units.find(v=>v.id===t.id):null;
+  if(enemy)marker(preview,enemy.x,enemy.z,'#e77964');
+  if(t.kind==='base')for(const gate of t.team==='enemy'?[{x:14,z:17}]:[{x:17,z:6}])marker(preview,gate.x,gate.z,'#e77964');
+ }
+}}
     for(const d of DEPOSITS){const developed=state.developed[`${d.x},${d.z}`];box(dynamic,.45,developed?.25:.08,.45,developed?'#73a5ac':'#bd9f61',coord(d.x),developed?.13:.04,coord(d.z));}
     for(const g of GATES)marker(preview,g.x,g.z,'#eac76c');
     for(const k of state.roads??[]){const [x,z]=k.split(',').map(Number);const m=new T.Mesh(new T.BoxGeometry(.83,.04,.26),mat('#cbb78c'));m.position.set(coord(x),.09,coord(z));dynamic.add(m);}
@@ -138,5 +145,5 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
     await new Promise(resolve=>setTimeout(resolve,400));cleanup(flashes);onPhase('정산');await new Promise(resolve=>setTimeout(resolve,200));
   }
   function render(){requestAnimationFrame(render);renderer.render(scene,camera)}render();
-  return {sync,setFocus,setPitch,setZoom,resetView,rotate,zoomBy,animate,campusCount:campus.group.userData.buildingCount};
+  return {sync,setFocus,setPitch,setZoom,resetView,rotate,zoomBy,animate,campusCount:campus.group.userData.buildingCount,rivalCounts:{korea:korea.group.userData.buildingCount,yonsei:yonsei.group.userData.buildingCount}};
 }

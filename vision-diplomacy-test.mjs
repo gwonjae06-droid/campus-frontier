@@ -3,7 +3,7 @@ import {initialState,emptyPlan,resolveTurn,targets,canMove,canOrder,enemyOrders}
 import {visibleTiles,exploredTiles,rememberExploration,tileKey} from './vision.js';
 import {isCeasefire,ceasefireUntil,canProposeCeasefire,aiAcceptsCeasefire,ownerOfTerritory} from './diplomacy.js';
 let s=initialState('standard');
-assert.equal(s.version,12);
+assert.equal(s.version,13);
 assert.deepEqual(Object.keys(s.explored).sort(),['ally','enemy','rival']);
 let sight=visibleTiles(s,'ally');
 assert.ok(sight.has(tileKey(3,8)),'scout must reveal a wider region');

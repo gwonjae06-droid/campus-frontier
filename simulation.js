@@ -34,7 +34,7 @@ export function initialState(mode='practice'){const state={version:8,turn:1,gold
  units:[{id:'a1',team:'ally',kind:'infantry',x:6,z:3,hp:10},{id:'a2',team:'ally',kind:'scout',x:3,z:6,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:14,z:17,hp:10},{id:'e2',team:'enemy',kind:'scout',x:17,z:14,hp:7}],
  research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},labs:{},labConstruction:{},grandConstruction:null,grandCompleted:false,wideSite:null,centralPoint:CENTRAL_POINT,roads:[],structures:[],pendingRecruits:[],points:Object.fromEntries(POINT_KEYS.map(k=>[k,null])),pointReady:{},nextId:3,victoryMode:null};
  if(mode==='standard'){
-   state.version=12;state.gameMode='standard';state.ceasefires={};state.rivalHP=30;state.rivalGold=10;
+   state.version=13;state.gameMode='standard';state.ceasefires={};state.rivalHP=30;state.rivalGold=10;
    state.research.rival=newResearch();state.capturePoints={ally:0,enemy:0,rival:0};
    state.units.push({id:'r1',team:'rival',kind:'infantry',x:14,z:3,hp:10},{id:'r2',team:'rival',kind:'scout',x:17,z:6,hp:7});
  }
@@ -121,7 +121,10 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  if(plan.diplomacy){const e=canProposeCeasefire(input,'ally',plan.diplomacy.target);if(e)throw Error(e);}
  const accepted=emptyPlan();for(const b of plan.builds){const e=canBuild(input,accepted,b.type,b.x,b.z);if(e)throw Error(e);accepted.builds.push(b);}
  for(const [id,o] of Object.entries(plan.orders)){const u=input.units.find(v=>v.id===id&&v.team==='ally');const e=canOrder(input,u,o,plan);if(e)throw Error(e);}
- const researchChoice=Object.hasOwn(plan,'research')?plan.research:input.research.ally.active;
+ // The accessible mode keeps research moving without a separate menu.
+ const suggested=['development','training','methodology','specialization','defense','siege','mobility','advanced','towers','roads','wide','integrated'];
+ const nextSuggested=()=>suggested.find(id=>canResearch(input,'ally',id)===null)??null;
+ const researchChoice=Object.hasOwn(plan,'research')?plan.research:input.research.ally.active??(input.gameMode==='standard'?nextSuggested():null);
  const researchError=canResearch(input,'ally',researchChoice);if(researchError)throw Error(researchError);
  if(plan.scholarshipTech!==undefined){
   const r=input.research.ally;
@@ -159,7 +162,7 @@ export function resolveTurn(input,plan,enemy=enemyOrders(input)){
  if(s.gameMode==='standard')s.rivalHP=Math.max(0,s.rivalHP-(damage.get('rival')??0));
  for(const u of s.units.filter(u=>u.hp<=0))events.push({type:'destroy',id:u.id,team:u.team});s.units=s.units.filter(u=>u.hp>0);s.structures=s.structures.filter(b=>b.hp>0);
  for(const u of s.units){const o=orders[u.id];if(o?.type==='heal'&&!damage.has(u.id)&&ownTerritory(s,u))u.hp=Math.min(stats(u).hp,u.hp+2);
-  const k=key(u.x,u.z);if(o?.type==='capture'&&Object.hasOwn(s.points,k)&&s.points[k]!==u.team){s.pointReady[k]=s.turn+(s.points[k]?2:1);s.points[k]=u.team;events.push({type:'capture',team:u.team,x:u.x,z:u.z});}}
+  const k=key(u.x,u.z);if((o?.type==='capture'||s.gameMode==='standard')&&Object.hasOwn(s.points,k)&&s.points[k]!==u.team){s.pointReady[k]=s.turn+(s.points[k]?2:1);s.points[k]=u.team;events.push({type:'capture',team:u.team,x:u.x,z:u.z});}}
  for(const b of plan.builds){if(b.type==='road'){s.roads??=[];s.roads.push(key(b.x,b.z));events.push({type:'road',x:b.x,z:b.z});continue;}if(s.units.some(u=>u.x===b.x&&u.z===b.z)){s.gold+=Math.floor(PRICE[b.type]/2);events.push({type:'failed',text:'생산 타일 점유로 취소 · 비용 50% 환급'});continue;}
   if(['recruit','scout','siege','cavalry'].includes(b.type)){const kind=b.type==='recruit'?'infantry':b.type;if(['siege','cavalry'].includes(kind)){const militaryBoost=Object.entries(s.specialties).some(([site,v])=>v==='military'&&s.points[site]==='ally'&&(s.pointReady[site]??0)<=s.turn);s.pendingRecruits.push({kind,x:b.x,z:b.z,ready:s.turn+(militaryBoost?0:1)});events.push({type:'production',text:`${STATS[kind].name} 훈련 시작 · ${militaryBoost?1:2}턴`});}else s.units.push({id:`a${s.nextId++}`,team:'ally',kind,x:b.x,z:b.z,hp:STATS[kind].hp});}
   else s.structures.push({id:`s${s.nextId++}`,type:b.type,x:b.x,z:b.z,hp:10,ready:s.turn+(b.type==='tower'?2:1)});events.push({type:'build',...b});}

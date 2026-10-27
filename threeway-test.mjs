@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {initialState,emptyPlan,resolveTurn,enemyOrders,targets,terrain,passable,SIZE,TURN_LIMIT,RIVAL_BASE,RIVAL_GATES,victoryPoints} from './simulation.js';
 import {canProject} from './growth.js';
 const s=initialState('standard');
-assert.equal(s.version,12);assert.equal(s.gameMode,'standard');assert.equal(s.rivalHP,30);
+assert.equal(s.version,13);assert.equal(s.gameMode,'standard');assert.equal(s.rivalHP,30);
 assert.equal(s.rivalGold,10);assert.equal(s.research.rival.done.length,0);
 assert.equal(s.units.filter(u=>u.team==='rival').length,2);
 assert.equal(terrain(RIVAL_BASE.x,RIVAL_BASE.z),'rival-base');
