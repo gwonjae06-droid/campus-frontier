@@ -14,11 +14,16 @@ for(const id of ['game','panelToggle','intelPanel','rpHud','scoreHud','viewToggl
 for(const action of ['attack','guard','capture','heal']){
  assert.ok(html.includes(`data-action="${action}"`),`missing floating ${action} action`);
 }
-assert.ok(html.includes('overlay-ui.css?v=fullmap-v08'));
-assert.ok(html.includes('game.js?v=fullmap-v08'));
+assert.ok(html.includes('overlay-ui.css?v=threeway-v09'));
+assert.ok(html.includes('game.js?v=threeway-v09'));
 assert.ok(game.includes('panel-open')&&game.includes('camera-open')&&game.includes('unit-selected'));
 assert.ok(css.includes('inset:0!important')&&css.includes('height:100dvh'),'canvas must fill viewport');
 assert.ok(css.includes('body:not(.panel-open) aside'));
 assert.ok(css.includes('body:not(.camera-open) .view-panel'));
 assert.ok(css.includes('@media(max-width:760px)'),'mobile HUD required');
+
+const app=readFileSync('game.js','utf8');
+assert.ok(app.includes("initialState('standard')"),'three-way mode must launch by default');
+assert.ok(html.includes('id="rivalHP"')&&html.includes('id="rivalBar"'),'third campus HUD missing');
+
 console.log('PASS: full-screen HUD, mobile panels, existing DOM bindings, camera controls and quick actions');

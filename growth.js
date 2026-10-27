@@ -38,7 +38,7 @@ export function canProject(s,p,o,remaining,team='ally'){
 }
 // Production is based on the start-of-turn snapshot, not ownership after combat.
 export function advanceResearch(s,before,team,choice,events){
- if((team==='ally'?s.homeHP:s.enemyHP)<=0)return;
+ if((team==='ally'?s.homeHP:team==='enemy'?s.enemyHP:s.rivalHP)<=0)return;
  const r=s.research[team];r.active=choice;const amount=r.bank+researchRate(before,team);r.bank=0;
  if(!choice){r.bank=Math.min(10,amount);if(amount>10)events.push({type:'research-overflow',team,amount:amount-10});return;}
  const total=(r.progress[choice]??0)+amount,t=TECHS[choice];r.progress[choice]=Math.min(t.cost,total);
@@ -46,8 +46,8 @@ export function advanceResearch(s,before,team,choice,events){
 }
 export function finishProjects(s,orders,team,events){
  for(const o of orders){const item=PROJECTS[o.type],home=o.site==='home',d=DEPOSITS.find(d=>d.site===o.site);
-  const lost=(team==='ally'?s.homeHP:s.enemyHP)<=0||(!home&&s.points[o.site]!==team)||o.type==='develop'&&s.units.some(u=>u.x===d.x&&u.z===d.z&&u.team!==team);
-  if(lost){s[team==='ally'?'gold':'enemyGold']+=Math.floor(item.cost/2);events.push({type:'failed',text:`${item.name} 방해 · 50% 환급`});continue;}
+  const lost=(team==='ally'?s.homeHP:team==='enemy'?s.enemyHP:s.rivalHP)<=0||(!home&&s.points[o.site]!==team)||o.type==='develop'&&s.units.some(u=>u.x===d.x&&u.z===d.z&&u.team!==team);
+  if(lost){s[team==='ally'?'gold':team==='enemy'?'enemyGold':'rivalGold']+=Math.floor(item.cost/2);events.push({type:'failed',text:`${item.name} 방해 · 50% 환급`});continue;}
   if(o.type==='develop')s.developed[`${d.x},${d.z}`]=true;else if(o.type==='lab'){s.labConstruction??={};s.labConstruction[o.site]={team,ready:s.turn+1};}else if(o.type==='wide')s.wideSite=o.site;else if(o.type==='grand')s.grandConstruction={team,ready:s.turn+2};else s.specialties[o.site]=o.type;
   events.push({type:'project',team,text:`${item.name} 완료 · 다음 턴부터 적용`});
  }
@@ -55,21 +55,21 @@ export function finishProjects(s,orders,team,events){
 export function finishLabs(s,events){
  for(const [site,job] of Object.entries(s.labConstruction??{})){
   if(job.ready>s.turn)continue;
-  const lost=site==='home'?(job.team==='ally'?s.homeHP<=0:s.enemyHP<=0):s.points[site]!==job.team;
-  if(lost){s[job.team==='ally'?'gold':'enemyGold']+=3;events.push({type:'failed',text:'연구 시설 건설 실패 · 3 OP 환급'});}
+  const lost=site==='home'?(job.team==='ally'?s.homeHP<=0:job.team==='enemy'?s.enemyHP<=0:s.rivalHP<=0):s.points[site]!==job.team;
+  if(lost){s[job.team==='ally'?'gold':job.team==='enemy'?'enemyGold':'rivalGold']+=3;events.push({type:'failed',text:'연구 시설 건설 실패 · 3 OP 환급'});}
   else{s.labs??={};s.labs[site]=true;events.push({type:'project',team:job.team,text:'연구 시설 완공 · 다음 턴부터 RP +1'});}
   delete s.labConstruction[site];
  }
 }
 export function finishGrand(s,events){
  const p=s.grandConstruction;if(!p||p.ready>s.turn)return;
- if((p.team==='ally'?s.homeHP:s.enemyHP)<=0){events.push({type:'failed',text:'본진 함락으로 종합 프로젝트 취소'});}
+ if((p.team==='ally'?s.homeHP:p.team==='enemy'?s.enemyHP:s.rivalHP)<=0){events.push({type:'failed',text:'본진 함락으로 종합 프로젝트 취소'});}
  else{s.grandCompleted=true;events.push({type:'project',team:p.team,text:'종합 프로젝트 완료 · 승리 점수 +10'});}
  s.grandConstruction=null;
 }
-export function aiGrowth(s){
- const r=s.research.enemy,technology=r.active??Object.keys(TECHS).find(id=>!canResearch(s,'enemy',id))??null;
- const p={builds:[],projects:[]};let money=s.enemyGold;
- for(const site of Object.keys(s.points)){const o={site,type:'economy'};if(!canProject(s,p,o,money,'enemy')){p.projects.push(o);money-=6;}}
+export function aiGrowth(s,team='enemy'){
+ const r=s.research[team],technology=r.active??Object.keys(TECHS).find(id=>!canResearch(s,team,id))??null;
+ const p={builds:[],projects:[]};let money=team==='enemy'?s.enemyGold:s.rivalGold;
+ for(const site of Object.keys(s.points)){const o={site,type:'economy'};if(!canProject(s,p,o,money,team)){p.projects.push(o);money-=6;}}
  return {technology,projects:p.projects};
 }
