@@ -1,8 +1,8 @@
-import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=05';
+import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=14';
 import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
 import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
-import {makeCampus} from './campus.js';
+import {makeCampus} from './campus.js?v=14';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
