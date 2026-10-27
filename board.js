@@ -1,10 +1,10 @@
 import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=05';
-import {DEPOSITS} from './growth.js?v=06';
+import {DEPOSITS} from './growth.js?v=08';
 import * as T from './vendor/three.module.js';
-import {SIZE,terrain,isCampus,key,stats,reachable,GATES} from './simulation.js?v=06';
+import {SIZE,terrain,isCampus,key,stats,reachable,GATES,ENEMY_BASE} from './simulation.js?v=08';
 import {makeCampus} from './campus.js';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
-export const coord=n=>(n-7)*1.12;
+export const coord=n=>(n-(SIZE-1)/2)*1.12;
 export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   const scene=new T.Scene();scene.background=new T.Color('#e9eee4');const world=new T.Group();scene.add(world);
   const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;container.append(renderer.domElement);
@@ -17,18 +17,23 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   for(let z=0;z<SIZE;z++)for(let x=0;x<SIZE;x++){
     const type=terrain(x,z),water=type==='water',color=water?'#65b4bf':isCampus(x,z)?'#5c9672':type==='resource'?'#d6bb76':(x+z)%3===0?'#abc587':'#b5cc91';
     const tile=box(world,1.095,.3,1.095,color,coord(x),-.15,coord(z));tile.userData.tile={x,z,type};tilePicks.push(tile);
-    if(type==='mountain')cone(world,.68,1.2,'#9dae97',coord(x),.5,coord(z),4);
+    if(type==='hill')cone(world,.53,.68,'#9dae97',coord(x),.38,coord(z),5);
     if(type==='forest'){box(world,.07,.4,.07,'#887357',coord(x),.2,coord(z));cone(world,.3,.7,'#427351',coord(x),.7,coord(z));}
     if(type==='water')box(world,.33,.012,.025,'#a9d9d7',coord(x),.015,coord(z));
-    if(type==='resource'){const central=x===8&&z===9;box(world,central?.94:.58,.2,central?.94:.58,central?'#e9c46e':'#e6d39c',coord(x),.1,coord(z));cone(world,central?.33:.21,central?.68:.42,central?'#bd8438':'#be9850',coord(x),central?.55:.4,coord(z),central?6:4);}
+    if(type==='resource'){const central=x===10&&z===10;box(world,central?.94:.58,.2,central?.94:.58,central?'#e9c46e':'#e6d39c',coord(x),.1,coord(z));cone(world,central?.33:.21,central?.68:.42,central?'#bd8438':'#be9850',coord(x),central?.55:.4,coord(z),central?6:4);}
   }
   const campus=makeCampus(data);campus.group.position.set(coord(3),.02,coord(3));world.add(campus.group);
   const outline=new T.LineLoop(new T.BufferGeometry().setFromPoints([new T.Vector3(-1.67,.12,-1.67),new T.Vector3(1.67,.12,-1.67),new T.Vector3(1.67,.12,1.67),new T.Vector3(-1.67,.12,1.67)]),new T.LineBasicMaterial({color:'#e4be65'}));campus.group.add(outline);
   flag(world,coord(4)+.42,.25,coord(4)+.42,'#24855f');
-  const tent=new T.Group();tent.position.set(coord(13),0,coord(13));box(tent,.85,.4,.75,'#a96851',0,.2,0);cone(tent,.7,.5,'#bf7357',0,.65,0,4);flag(tent,.4,.8,.1,'#b84f3e');world.add(tent);
-  box(world,17.3,.14,17.3,'#d1dacb',0,-.4,0);
+  const tent=new T.Group();tent.position.set(coord(ENEMY_BASE.x),0,coord(ENEMY_BASE.z));
+ box(tent,2.95,.1,2.95,'#b8a58d',0,.02,0);
+ for(const [x,z,sz] of [[0,0,1],[-.8,-.5,.75],[.9,.45,.72],[-.5,.9,.6],[.7,-.8,.54]]){
+   box(tent,.62*sz,.7*sz,.61*sz,'#bb7c68',x,.4*sz,z);
+   cone(tent,.47*sz,.37*sz,'#765c56',x,.95*sz,z,4);
+ }flag(tent,1.1,.65,-1.0,'#b84f3e');world.add(tent);
+  box(world,SIZE*1.14,.14,SIZE*1.14,'#d1dacb',0,-.4,0);
   function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(2.9,.51,1);world.add(s);return s;}
-  const labels=[label(`성균관대 · ${data.buildings.length}개 건물`,coord(3),1.3,coord(2),'#285e46'),label('훈련 상대 · AI 전초기지',coord(13),1.5,coord(13),'#a9624c'),label('중앙 거점 · 5점',coord(8),1.65,coord(9),'#a6782a')];
+  const labels=[label(`성균관대 · ${data.buildings.length}개 건물`,coord(3),1.3,coord(2),'#285e46'),label('훈련 상대 · AI 캠퍼스',coord(17),1.5,coord(17),'#a9624c'),label('중앙 거점 · 5점',coord(10),1.65,coord(10),'#a6782a')];
   let dynamic=new T.Group(),preview=new T.Group();world.add(dynamic,preview);let unitMeshes=new Map(),currentState=null;
   function cleanup(g){g.traverse(o=>{o.geometry?.dispose();if(o.material&&!materials.has(o.material.color?.getStyle())){if(o.userData.ownMaterial)o.material.dispose();}});world.remove(g);}
   function createUnit(u,parent){const g=new T.Group();g.position.set(coord(u.x),0,coord(u.z));const color=u.team==='ally'?'#276b51':'#b65c47';box(g,u.kind==='siege'?.48:.24,u.kind==='siege'?.22:.3,u.kind==='siege'?.34:.22,color,0,.24,0);if(u.kind==='cavalry')box(g,.38,.2,.54,'#9b7957',0,.19,0);if(u.kind==='siege'){box(g,.48,.07,.13,'#665e4b',0,.48,-.15);for(const x of [-.2,.2])cone(g,.1,.16,'#68593f',x,.11,.24,8);}box(g,.21,.19,.2,'#ead6af',0,.5,0);cone(g,.2,u.kind==='scout'?.28:.16,color,0,.67,0,4);box(g,.05,.35,.05,'#8d8971',.19,.36,0);box(g,.5,.045,.065,'#596a57',0,.84,0);box(g,.5*u.hp/stats(u).hp,.05,.07,u.team==='ally'?'#4dbb81':'#ec9673',-.25+.25*u.hp/stats(u).hp,.846,0);g.userData.unitId=u.id;parent.add(g);return g;}
@@ -39,9 +44,11 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
     const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move')for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');}
     for(const d of DEPOSITS){const developed=state.developed[`${d.x},${d.z}`];box(dynamic,.45,developed?.25:.08,.45,developed?'#73a5ac':'#bd9f61',coord(d.x),developed?.13:.04,coord(d.z));}
     for(const g of GATES)marker(preview,g.x,g.z,'#eac76c');
+    for(const k of state.roads??[]){const [x,z]=k.split(',').map(Number);const m=new T.Mesh(new T.BoxGeometry(.83,.04,.26),mat('#cbb78c'));m.position.set(coord(x),.09,coord(z));dynamic.add(m);}
+    if(state.grandConstruction||state.grandCompleted)flag(dynamic,coord(3)-.9,.3,coord(3)-.9,state.grandCompleted?'#e2b046':'#94a2ac');
     for(const [k,owner] of Object.entries(state.points)){if(!owner)continue;const [x,z]=k.split(',').map(Number);flag(dynamic,coord(x)+.25,.3,coord(z),owner==='ally'?'#2b8f63':'#bb6048');}
   }
-  function resize(){const rect=container.getBoundingClientRect();w=rect.width;h=rect.height;renderer.setSize(w,h);const span=Math.max(9.6,13.3*Math.sin(pitch*Math.PI/180),13/(w/h));camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.zoom=zoom;const pos=orbitPosition(angle,pitch,target);camera.position.set(pos.x,pos.y,pos.z);camera.lookAt(target);camera.updateProjectionMatrix();onViewChange?.(pitch,zoom);}new ResizeObserver(resize).observe(container);resize();
+  function resize(){const rect=container.getBoundingClientRect();w=rect.width;h=rect.height;renderer.setSize(w,h);const span=Math.max(14.2,19.5*Math.sin(pitch*Math.PI/180),19/(w/h));camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.zoom=zoom;const pos=orbitPosition(angle,pitch,target);camera.position.set(pos.x,pos.y,pos.z);camera.lookAt(target);camera.updateProjectionMatrix();onViewChange?.(pitch,zoom);}new ResizeObserver(resize).observe(container);resize();
   const ray=new T.Raycaster(),pointer=new T.Vector2();function pick(e){const r=container.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);if(focus){const building=ray.intersectObjects(campus.picks)[0];if(building)return {building:building.object.userData.building};}const hit=ray.intersectObjects(tilePicks)[0];return hit?.object.userData.tile;}
   const canvas=renderer.domElement;canvas.style.touchAction='none';
   const pointers=new Map();let down=null,gesture=null,gestureEnded=false;
@@ -53,7 +60,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
     gesture={...m,startZoom:zoom,startTarget:target.clone(),angle};down=null;gestureEnded=true;
   }
   function panFromGesture(m){
-    const pixelWorld=(2*Math.max(9.6,13.3*Math.sin(pitch*Math.PI/180),13/(w/h)))/(Math.max(h,1)*gesture.startZoom);
+    const pixelWorld=(2*Math.max(14.2,19.5*Math.sin(pitch*Math.PI/180),19/(w/h)))/(Math.max(h,1)*gesture.startZoom);
     const shift=groundPan(m.x-gesture.x,m.y-gesture.y,gesture.angle,pixelWorld);
     const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
     target.x=T.MathUtils.clamp(gesture.startTarget.x+shift.x,lower,upper);

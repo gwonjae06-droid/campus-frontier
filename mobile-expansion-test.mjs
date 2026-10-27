@@ -21,10 +21,10 @@ assert.ok(siege);assert.equal(siege.hp,STATS.siege.hp);
 assert.equal(PRICE.siege,9);assert.equal(PRICE.cavalry,8);
 
 let combat=initialState();
-combat.units=[{id:'a1',team:'ally',kind:'siege',x:11,z:13,hp:8}];
+combat.units=[{id:'a1',team:'ally',kind:'siege',x:14,z:17,hp:8}];
 const siegeUnit=combat.units[0];
 assert.ok(targets(combat,siegeUnit).some(t=>t.kind==='base'&&t.team==='enemy'));
-assert.equal(canMove(combat,siegeUnit,12,13),null);
+assert.equal(canMove(combat,siegeUnit,15,17),null);
 const attacked=resolveTurn(combat,{...emptyPlan(),orders:{a1:{type:'attack',target:{kind:'base',team:'enemy'}}}},{}).state;
 assert.equal(attacked.enemyHP,24);
 assert.ok(canMove(combat,{id:'a2',team:'ally',kind:'cavalry',x:6,z:6,hp:9},8,6)===null);

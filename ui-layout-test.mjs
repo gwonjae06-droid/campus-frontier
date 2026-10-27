@@ -14,8 +14,8 @@ for(const id of ['game','panelToggle','intelPanel','rpHud','scoreHud','viewToggl
 for(const action of ['attack','guard','capture','heal']){
  assert.ok(html.includes(`data-action="${action}"`),`missing floating ${action} action`);
 }
-assert.ok(html.includes('overlay-ui.css?v=overlay-v07'));
-assert.ok(html.includes('game.js?v=overlay-v07'));
+assert.ok(html.includes('overlay-ui.css?v=fullmap-v08'));
+assert.ok(html.includes('game.js?v=fullmap-v08'));
 assert.ok(game.includes('panel-open')&&game.includes('camera-open')&&game.includes('unit-selected'));
 assert.ok(css.includes('inset:0!important')&&css.includes('height:100dvh'),'canvas must fill viewport');
 assert.ok(css.includes('body:not(.panel-open) aside'));

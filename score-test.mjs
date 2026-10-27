@@ -5,7 +5,7 @@ import {MIN_PITCH,MAX_PITCH,clampPitch} from './camera.js';
 const s=initialState();
 assert.equal(POINT_KEYS.length,7);
 assert.equal(Object.keys(s.points).length,7);
-assert.equal(terrain(8,9),'resource');
+assert.equal(terrain(10,10),'resource');
 assert.equal(victoryPoints(s,'ally'),5);
 assert.equal(victoryPoints(s,'enemy'),5);
 s.points[CENTRAL_POINT]='ally';s.pointReady[CENTRAL_POINT]=1;
