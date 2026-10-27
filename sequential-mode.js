@@ -48,7 +48,7 @@ export function technologyCost(s,t,branch){
  if(!BRANCHES[branch])return null;
  const l=level(s,t,branch);return l>=3?null:Math.max(3,5+l*6-(t==='ally'?2:0)-level(s,t,'science'));
 }
-export function cityCost(s,k){const l=s.cityLevels?.[k]??1;return l>=3?null:5+l*5;}
+export function cityCost(s,k){const l=s.cityLevels?.[k]??1;return l>=3?null:5+(l-1)*5;}
 export function cityIncome(s,t){
  return 5+Object.entries(s.points).reduce((n,[k,team])=>team===t&&(s.pointReady?.[k]??0)<=s.turn?n+2*(s.cityLevels[k]??1):n,0)
    +2*level(s,t,'economy')+(t==='rival'?Object.values(s.points).filter(v=>v==='rival').length:0);
