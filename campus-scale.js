@@ -21,7 +21,13 @@ export function campusTransform(data){
 // small 4×4 horizontal map scale for metres made thousands of buildings
 // nearly flat; avoid oversized towers by capping instead of multiplying
 // heights by an arbitrary campus-specific factor.
-export function visibleBuildingHeight(metres){
+export function visibleBuildingHeight(metres,footprintWidth,footprintDepth){
  const h=Number.isFinite(metres)&&metres>0?metres:12;
- return Math.max(0.11,Math.min(0.82,h*0.012));
+ const desired=Math.max(0.11,Math.min(0.82,h*0.012));
+ // Small mapped buildings otherwise become needles because their horizontal
+ // geographic footprint is uniformly scaled but roof height is stylized.
+ if(!(footprintWidth>0&&footprintDepth>0))return desired;
+ const footprint=Math.sqrt(footprintWidth*footprintDepth);
+ const proportionalLimit=Math.max(0.13,Math.min(0.82,footprint*1.75+0.09));
+ return Math.min(desired,proportionalLimit);
 }

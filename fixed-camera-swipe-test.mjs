@@ -5,11 +5,11 @@ import {swipePan,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js';
 const near=(a,b)=>Math.abs(a-b)<1e-8;
 
 assert.equal(CAMERA_MODE,'strategy-fixed');
-assert.equal(DEFAULT_PITCH,56);
+assert.equal(DEFAULT_PITCH,70);
 assert.equal(MIN_PITCH,MAX_PITCH);
 assert.equal(MIN_PITCH,DEFAULT_PITCH);
 assert.equal(ANGLE_FREEDOM,0);
-for(const pitch of [-120,0,45,56,100,NaN]){
+for(const pitch of [-120,0,45,70,100,NaN]){
  assert.equal(clampPitch(pitch),DEFAULT_PITCH);
 }
 for(const angle of [-100,0,Math.PI/3,100,NaN])assert.equal(clampAngle(angle),DEFAULT_ANGLE);

@@ -1,8 +1,8 @@
-import {DEFAULT_PITCH,DEFAULT_ANGLE,orbitPosition,mapHalfSpan} from './camera.js?v=17';
+import {DEFAULT_PITCH,DEFAULT_ANGLE,orbitPosition,mapHalfSpan,orthographicPixelScales} from './camera.js?v=21';
 import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
 import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=18';
-import {makeCampus} from './campus.js?v=16';
+import {makeCampus} from './campus.js?v=21';
 import {CAMPUS_PLOT_WIDTH} from './campus-scale.js?v=15';
 import {addUrbanCell,CAMPUS_COLORS} from './urban-city.js?v=16';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
@@ -12,7 +12,10 @@ export const coord=n=>(n-(SIZE-1)/2)*1.12;
 export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalData={}){
   const scene=new T.Scene();scene.background=new T.Color('#1a2934');const world=new T.Group();scene.add(world);
   const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,matchMedia('(max-width:760px)').matches?1.5:2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;container.append(renderer.domElement);
-  const camera=new T.OrthographicCamera(-15,15,15,-15,.01,150),materials=new Map(),tilePicks=[];let pitch=DEFAULT_PITCH,angle=DEFAULT_ANGLE,zoom=1.08,focus=false,target=new T.Vector3(),w=1,h=1;
+  // Use one world-to-screen scale and allow a closer initial view in portrait.
+  // Portrait users pan a little rather than seeing an illegibly tiny full map.
+  const defaultZoom=()=>{const rect=container.getBoundingClientRect();return rect.width/Math.max(1,rect.height)<.78?1.45:1.18;};
+  const camera=new T.OrthographicCamera(-15,15,15,-15,.01,150),materials=new Map(),tilePicks=[];let pitch=DEFAULT_PITCH,angle=DEFAULT_ANGLE,zoom=defaultZoom(),focus=false,target=new T.Vector3(),w=1,h=1;
   scene.add(new T.HemisphereLight(0xffffff,0x566f65,1.75));const sun=new T.DirectionalLight(0xfff2d8,2.8);sun.position.set(-12,27,11);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:70});sun.shadow.normalBias=.015;scene.add(sun);
   function mat(c){if(!materials.has(c))materials.set(c,new T.MeshStandardMaterial({color:c,roughness:.85}));return materials.get(c);}
   function box(parent,w,h,d,color,x,y,z){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),mat(color));mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
@@ -112,7 +115,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     gesture={...m,startZoom:zoom,startTarget:target.clone(),angle};down=null;gestureEnded=true;
   }
   function panFromGesture(m){
-    const pixelWorld=(2*mapHalfSpan(SIZE,1.12,pitch,gesture.angle,w/h))/(Math.max(h,1)*gesture.startZoom);
+    const pixelWorld=1/orthographicPixelScales(SIZE,1.12,pitch,gesture.angle,w,h,gesture.startZoom).x;
     const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
     const next=swipePan(gesture.startTarget,m.x-gesture.x,m.y-gesture.y,angle,pitch,pixelWorld,{min:lower,max:upper});
     target.x=next.x;target.z=next.z;
@@ -136,7 +139,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     const dx=e.clientX-down.x,dy=e.clientY-down.y;
     if(Math.hypot(dx,dy)>7)down.moved=true;
     if(down.moved){
-      const worldPerPixel=2*mapHalfSpan(SIZE,1.12,pitch,angle,w/h)/(Math.max(1,h)*down.startZoom);
+      const worldPerPixel=1/orthographicPixelScales(SIZE,1.12,pitch,angle,w,h,down.startZoom).x;
       const lower=focus?coord(1):coord(0),upper=focus?coord(5):coord(SIZE-1);
       const next=swipePan(down.startTarget,dx,dy,angle,pitch,worldPerPixel,{min:lower,max:upper});
       target.x=next.x;target.z=next.z;
@@ -159,7 +162,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   canvas.addEventListener('lostpointercapture',e=>{pointers.delete(e.pointerId);if(!pointers.size){gesture=null;gestureEnded=false;down=null;}});
   canvas.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom-e.deltaY*.0018)},{passive:false});
   function resetView(){pitch=DEFAULT_PITCH;angle=DEFAULT_ANGLE;setFocus(false);}
-  function setFocus(value){focus=value;zoom=value?4.4:1.08;target=value?new T.Vector3(coord(3.5),.25,coord(3.5)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
+  function setFocus(value){focus=value;zoom=value?4.4:defaultZoom();target=value?new T.Vector3(coord(3.5),.25,coord(3.5)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
   function zoomBy(d){setZoom(zoom+d);}
   async function animate(before,after,events,onPhase){
     onPhase('이동');const moves=events.filter(e=>e.type==='move');const start=performance.now();await new Promise(resolve=>{function frame(now){const t=Math.min(1,(now-start)/650),ease=t*t*(3-2*t);for(const m of moves){const mesh=unitMeshes.get(m.id);if(mesh)mesh.position.set(T.MathUtils.lerp(coord(m.from.x),coord(m.to.x),ease),Math.sin(t*Math.PI)*.07,T.MathUtils.lerp(coord(m.from.z),coord(m.to.z),ease));}if(t<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame)});

@@ -76,10 +76,10 @@ assert.ok(practiceTier(1600).includes('마스터'));
 
 const html=readFileSync('index.html','utf8'),app=readFileSync('arena-app.js','utf8'),peer=readFileSync('arena-peer.js','utf8'),css=readFileSync('arena.css','utf8');
 assert.ok(html.includes('id="arenaRoot"')&&html.includes('arena-app.js?v=1'));
-assert.ok(html.includes('game.js?v=explore-v18'),'original 3D mode must remain accessible');
-assert.ok(!html.includes('<script type="module" src="game.js?v=explore-v18"'),'load classic 3D lazily for performance');
+assert.ok(html.includes('game.js?v=geometry-v21'),'original 3D mode must remain accessible');
+assert.ok(!html.includes('<script type="module" src="game.js?v=geometry-v21"'),'load classic 3D lazily for performance');
 for(const x of ['ai-setup','local-setup','online-setup','renderRank','renderBattle','sendChat','data-chat-input','createDuelPeer'])assert.ok(app.includes(x),'missing '+x);
-assert.ok(app.includes("await import('./game.js?v=explore-v18')"));
+assert.ok(app.includes("await import('./game.js?v=geometry-v21')"));
 assert.ok(peer.includes('RTCPeerConnection')&&peer.includes('createDataChannel')&&peer.includes('onmessage'));
 assert.ok(!app.includes("officialRating"),'no fake official leaderboard');
 assert.ok(css.includes('@media(max-width:800px)'));

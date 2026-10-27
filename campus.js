@@ -1,5 +1,5 @@
 import * as T from './vendor/three.module.js';
-import {campusTransform,CAMPUS_MODEL_WIDTH,visibleBuildingHeight} from './campus-scale.js?v=15';
+import {campusTransform,CAMPUS_MODEL_WIDTH,visibleBuildingHeight} from './campus-scale.js?v=21';
 
 export function makeCampus(data,school='skku') {
   const themes={

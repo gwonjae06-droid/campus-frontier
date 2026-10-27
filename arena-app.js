@@ -253,7 +253,7 @@ root.addEventListener('click',async e=>{
  if(act==='rank'){page='rank';render();return;}
  if(act==='classic'){
   root.hidden=true;
-  try{if(!classicLoaded){classicLoaded=true;await import('./game.js?v=explore-v18');}
+  try{if(!classicLoaded){classicLoaded=true;await import('./game.js?v=geometry-v21');}
    let b=document.getElementById('returnArena');
    if(!b){b=node('button','', '← 대전 메뉴');b.id='returnArena';b.style.cssText='position:fixed;z-index:450;top:75px;left:12px;padding:10px;border:1px solid #7ccaaa;border-radius:9px;background:#124b3e;color:white;cursor:pointer';document.body.append(b);b.onclick=()=>{root.hidden=false;b.hidden=true;render();};}
    b.hidden=false;
