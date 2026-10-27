@@ -24,7 +24,7 @@ function reserveAction(type){const u=state.units.find(u=>u.id===selected);if(typ
 const siteName=site=>site==='home'?'캠퍼스':site===CENTRAL_POINT?'중앙 주요 거점':site.split(',').map(n=>Number(n)+1).join(', ')+' 거점';
 const keyForSite=(x,z)=>`${x},${z}`;
 function unitName(u){return `${u.team==='ally'?'성균관대':u.team==='rival'?'연세대 AI':'고려대 AI'} ${stats(u).name} ${u.id.slice(1)}`;}
-function selection(title,body){$('#selectionTitle').textContent=title;$('#selectionBody').textContent=body;}
+function selection(title,body){toast(`${title} · ${body}`);}
 function setMode(next){mode=next;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));if(focused&&mode!=='inspect')setFocus(false);refresh();}
 function refresh(){
  $('#gold').textContent=availableGold(state,plan);$('#gold').title=`보유 ${state.gold} / 예약 ${state.gold-availableGold(state,plan)}`;$('#health').textContent=state.homeHP;$('#turn').textContent=`${Math.min(state.turn,TURN_LIMIT)}/${TURN_LIMIT}`;$('#scoreBoard').textContent=`점수 · 성균관대 ${victoryPoints(state,'ally')} / 고려대 ${victoryPoints(state,'enemy')} / 연세대 ${victoryPoints(state,'rival')}`;$('#rpHud').textContent=researchRate(state);$('#scoreHud').textContent=`${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')}:${victoryPoints(state,'rival')}`;document.body.classList.toggle('unit-selected',!!selected&&!busy&&!state.result);$('#enemyHP').textContent=`${state.enemyHP} / 30`;$('#enemyBar').value=state.enemyHP;const sight=visibleTiles(state,'ally'),seen=exploredTiles(state,'ally');
@@ -71,22 +71,22 @@ function pick(hit){
  const type=terrain(x,z);selection(structure?names[structure.type]:type==='resource'?'자원 거점':type==='enemy-base'?'AI 전초기지':`${x+1}, ${z+1} 구역`,structure?`내구도 ${structure.hp}. ${structure.type==='tower'?'사거리 2칸, 공격 3. 2턴 건설, 완공 다음 턴부터 공격.':'적의 이동을 막습니다.'}`:type==='resource'?'거점에 도착한 다음 턴에 점령 명령을 내리세요. 정상 거점은 OP +2. 적 거점은 한 턴 안정화합니다.':type==='enemy-base'?'인접한 아군의 공격을 예약하세요. 이동 후 자동 공격하지 않습니다.':'부대를 선택하거나 건설 도구를 선택하세요.');
 }
 async function execute(){if(busy||state.result)return;busy=true;selected=null;refresh();try{const before=state,{state:next,events}=resolveTurn(state,plan,committedEnemy);state=next;plan=emptyPlan();committedEnemy=enemyOrders(state);save();await board.animate(before,next,events,phase=>{$('#phase').textContent=`턴 ${before.turn} 결과 재생 · ${phase}`;});const destroyed=events.filter(e=>e.type==='destroy').length,attacks=events.filter(e=>e.type==='attack').length,income=events.find(e=>e.type==='income').amount;
- toast(state.result?(state.victoryMode='score'?`${TURN_LIMIT}턴 종료 · 점수 ${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')}:${victoryPoints(state,'rival')} · ${state.result==='victory'?'승리':state.result==='defeat'?'패배':'무승부'}`:({victory:'승리! 적 전초기지를 점령했습니다.',defeat:'본진이 함락되었습니다. 새 연습에서 방어선을 바꿔보세요.',draw:'양쪽 본진이 동시에 함락되었습니다.'})[state.result]):`턴 ${state.turn-1} 완료 · 교전 ${attacks}회${destroyed?` · 부대 ${destroyed}개 소멸`:''} · 자원 +${income}`);const diplomacyEvents=events.filter(e=>e.type==='diplomacy-accepted'||e.type==='diplomacy-rejected');if(diplomacyEvents.length)toast(diplomacyEvents.map(e=>e.text).join(' · '));
+ toast(state.result?(state.victoryMode==='score'?`${TURN_LIMIT}턴 종료 · 점수 ${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')}:${victoryPoints(state,'rival')} · ${state.result==='victory'?'승리':state.result==='defeat'?'패배':'무승부'}`:({victory:'승리! 적 전초기지를 점령했습니다.',defeat:'본진이 함락되었습니다. 새 연습에서 방어선을 바꿔보세요.',draw:'양쪽 본진이 동시에 함락되었습니다.'})[state.result]):`턴 ${state.turn-1} 완료 · 교전 ${attacks}회${destroyed?` · 부대 ${destroyed}개 소멸`:''} · 자원 +${income}`);const diplomacyEvents=events.filter(e=>e.type==='diplomacy-accepted'||e.type==='diplomacy-rejected');if(diplomacyEvents.length)toast(diplomacyEvents.map(e=>e.text).join(' · '));
   selection(`턴 ${state.turn-1} 결과`,`${events.filter(e=>e.type==='move').length}개 부대 이동 · ${attacks}회 공격 · 수입 +${income}${events.some(e=>e.type==='reinforce')?' · 적 병력 모집':''}${events.filter(e=>e.type==='failed'||['research','project'].includes(e.type)&&e.team==='ally').map(e=>' · '+e.text).join('')}`);
  }catch(error){toast(`명령을 실행하지 못했습니다: ${error.message}`);}finally{busy=false;$('#phase').textContent=state.result?'연습 종료':'명령 예약';refresh();}}
  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{setMode(b.dataset.mode);toast(mode==='move'?'아군을 선택한 뒤 이동할 타일을 누르세요.':mode==='inspect'?'건물·부대·타일을 눌러 정보를 확인하세요.':mode==='road'?'도로망 연구 후 자기 영토의 통행 가능한 타일을 누르세요.':`${names[mode]} · 캠퍼스 영토에 예약하세요. 모집은 금빛 출전 타일입니다.`);});
  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>reserveAction(b.dataset.action));
  $('#resolve').onclick=execute;$('#clearPlan').onclick=()=>{plan=emptyPlan();save();refresh();toast('모든 예약을 취소하고 자원을 돌려놓았습니다.');};$('#focusCampus').onclick=()=>setFocus(!focused);$('#overview').onclick=()=>setFocus(false);
  $('#panelToggle').onclick=()=>toggleHudPanel('panel-open',$('#panelToggle'),!document.body.classList.contains('panel-open'));
- $('#viewToggle').onclick=()=>toggleHudPanel('camera-open',$('#viewToggle'),!document.body.classList.contains('camera-open'));
+
  $('#creditsOpen').onclick=()=>$('#creditsDialog').showModal();
- $('#game').addEventListener('pointerdown',()=>{if(compactScreen.matches&&document.body.classList.contains('panel-open'))toggleHudPanel('panel-open',$('#panelToggle'),false);if(document.body.classList.contains('camera-open'))toggleHudPanel('camera-open',$('#viewToggle'),false);});
- compactScreen.addEventListener('change',()=>{toggleHudPanel('panel-open',$('#panelToggle'),!compactScreen.matches);toggleHudPanel('camera-open',$('#viewToggle'),false);});
+ $('#game').addEventListener('pointerdown',()=>{if(compactScreen.matches&&document.body.classList.contains('panel-open'))toggleHudPanel('panel-open',$('#panelToggle'),false);});
+ compactScreen.addEventListener('change',()=>toggleHudPanel('panel-open',$('#panelToggle'),!compactScreen.matches));
  $('#pitchLow').onclick=()=>board?.setPitch(22);$('#pitchHigh').onclick=()=>board?.setPitch(72);
   $('#zoomRange').oninput=e=>board?.setZoom(Number(e.target.value));
   $('#rotateLeft').onclick=()=>board?.rotate(-1);$('#rotateRight').onclick=()=>board?.rotate(1);$('#zoomIn').onclick=()=>board?.zoomBy(.65);$('#zoomOut').onclick=()=>board?.zoomBy(-.65);
  $('#pitch').oninput=e=>board?.setPitch(Number(e.target.value));$('#resetView').onclick=()=>{setFocus(false);board?.resetView();};
- $('#growth').onclick=()=>$('#growthDialog').showModal();
+ $('#growth').onclick=()=>{$('#growthDialog').showModal();requestAnimationFrame(renderTreeConnections);};
  $('#diplomacy').onclick=()=>{$('#diplomacyDialog').showModal();refreshDiplomacy();};
  document.querySelectorAll('[data-truce]').forEach(b=>b.onclick=()=>{const target=b.dataset.truce,error=canProposeCeasefire(state,'ally',target);if(error){toast(error);return;}plan.diplomacy={target};save();refresh();toast(`${target==='enemy'?'고려대':'연세대'}에 5턴 휴전 제안을 예약했습니다.`);});
  $('#clearDiplomacy').onclick=()=>{delete plan.diplomacy;save();refresh();};
@@ -96,7 +96,7 @@ $('#mobilePlan').onclick=()=>{$('#planContent').append($('#orders'));$('#planDia
 $('#planDialog').addEventListener('close',()=>document.querySelector('aside').insertBefore($('#orders'),$('#reset')));
 $('#mobileClear').onclick=()=>{plan=emptyPlan();save();refresh();toast('모든 예약을 취소했습니다.');};
 $('#mobileReset').onclick=()=>{$('#dialog').close();$('#resetDialog').showModal();};
- addEventListener('keydown',e=>{if(e.key==='Escape'&&!busy){if(document.body.classList.contains('camera-open'))toggleHudPanel('camera-open',$('#viewToggle'),false);else if(compactScreen.matches&&document.body.classList.contains('panel-open'))toggleHudPanel('panel-open',$('#panelToggle'),false);else {selected=null;if(focused)setFocus(false);setMode('move');}}});
+ addEventListener('keydown',e=>{if(e.key==='Escape'&&!busy){if(compactScreen.matches&&document.body.classList.contains('panel-open'))toggleHudPanel('panel-open',$('#panelToggle'),false);else {selected=null;if(focused)setFocus(false);setMode('move');}}});
  try{const response=await fetch('./data/skku-campus.json');if(!response.ok)throw new Error('지도 데이터를 불러오지 못했습니다.');const data=await response.json();board=createBoard($('#game'),data,pick,null,(pitch,zoom)=>{$('#pitch').value=Math.round(pitch);$('#pitchValue').textContent=`${Math.round(pitch)}°`;$('#zoomRange').value=zoom;$('#zoomValue').textContent=`${zoom.toFixed(1)}×`;});$('#buildingCount').textContent=board.campusCount;$('#loading').remove();refresh();try{if(!localStorage.getItem(SAVE)&&localStorage.getItem('campus-frontier-turn-v9'))toast('규칙 변경으로 새 연습을 시작합니다. 이전 저장은 별도로 보존됩니다.');}catch{}if(!storageAvailable)toast('브라우저 저장을 사용할 수 없습니다. 이번 플레이는 새로고침 시 초기화됩니다.');}catch(error){$('#loading').textContent=`실행 오류: ${error.message} 새로고침해 다시 시도하세요.`;}
 
 
@@ -116,6 +116,39 @@ function refreshDiplomacy(){
  $('#clearDiplomacy').disabled=busy||!plan.diplomacy;
 }
 
+const TECH_POSITIONS={
+ development:[1,1],specialization:[1,2],wide:[1,3],
+ defense:[2,1],towers:[2,2],roads:[3,2],
+ training:[4,1],siege:[4,2],mobility:[5,2],
+ methodology:[6,1],advanced:[6,2],integrated:[6,3]
+};
+function renderTreeConnections(){
+ const tree=$('#techList');if(!tree)return;
+ tree.querySelector('.skill-links')?.remove();
+ if(!tree.offsetWidth)return;
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ svg.setAttribute('class','skill-links');svg.setAttribute('aria-hidden','true');
+ svg.setAttribute('viewBox',`0 0 ${tree.scrollWidth} ${tree.scrollHeight}`);
+ svg.setAttribute('preserveAspectRatio','none');
+ const active=Object.hasOwn(plan,'research')?plan.research:state.research.ally.active;
+ for(const [id,tech] of Object.entries(TECHS)){
+  if(!tech.requires)continue;
+  const source=tree.querySelector(`[data-tech="${tech.requires}"]`);
+  const target=tree.querySelector(`[data-tech="${id}"]`);
+  if(!source||!target)continue;
+  const x1=source.offsetLeft+source.offsetWidth,y1=source.offsetTop+source.offsetHeight/2;
+  const x2=target.offsetLeft,y2=target.offsetTop+target.offsetHeight/2;
+  const dx=Math.max(23,(x2-x1)*.45);
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`);
+  const done=hasTech(state,'ally',id),ready=hasTech(state,'ally',tech.requires);
+  path.setAttribute('class',`skill-link ${done?'completed':id===active?'selected':ready?'available':'locked'}`);
+  svg.append(path);
+ }
+ tree.prepend(svg);
+}
+window.addEventListener('resize',()=>{if($('#growthDialog').open)requestAnimationFrame(renderTreeConnections);});
+
 function refreshGrowth(){
  const r=state.research.ally,active=Object.hasOwn(plan,'research')?plan.research:r.active,rate=researchRate(state);
  $('#growth').textContent=active?`${TECHS[active].name} ${r.progress[active]??0}/${TECHS[active].cost} · +${rate} RP`:`연구 선택 · +${rate} RP/턴`;
@@ -123,12 +156,21 @@ function refreshGrowth(){
  $('#researchWarning').textContent=!active?`연구 미선택 · 이번 턴 종료에 ${Math.max(0,r.bank+rate-10)} RP가 보관 상한을 넘어 소실됩니다.`:'선택을 바꿔도 기술별 진행도는 보존됩니다. 완성된 기술은 다음 턴부터 사용합니다.';
  const techList=$('#techList');techList.replaceChildren();
  for(const [id,t] of Object.entries(TECHS)){
-  const done=hasTech(state,'ally',id),error=canResearch(state,'ally',id),button=document.createElement('button');button.className='tech-card';button.classList.toggle('active',id===active);
+  const done=hasTech(state,'ally',id),error=canResearch(state,'ally',id),button=document.createElement('button');button.className='tech-card skill-node';button.dataset.tech=id;
+   button.classList.toggle('active',id===active);
+   button.classList.toggle('completed',done);
+   button.classList.toggle('locked',!!error&&!done);
+   button.classList.toggle('unlocked',!error&&!done);
+   const pos=TECH_POSITIONS[id];if(pos){button.style.gridRow=String(pos[0]);button.style.gridColumn=String(pos[1]);}
   const title=document.createElement('strong');const cost=Math.max(3,t.cost-(r.discounted?.[id]??0)-(plan.scholarshipTech===id&&!r.discounted?.[id]?3:0));title.textContent=`${done?'✓ 완료':id===active?'▶ 선택 중':error?'🔒 잠김':'선택 가능'} · ${t.name} ${r.progress[id]??0}/${cost} RP`;
-  const detail=document.createElement('small');detail.textContent=t.effect+(error&&!done?` · ${error}`:'');button.append(title,detail);button.disabled=busy||!!state.result||!!error;
+  const detail=document.createElement('small');detail.textContent=t.effect+(error&&!done?` · ${error}`:'');
+   const progress=document.createElement('span');progress.className='tech-progress';
+   const fill=document.createElement('i');fill.style.width=`${Math.min(100,(r.progress[id]??0)/cost*100)}%`;progress.append(fill);
+   button.append(title,detail,progress);button.disabled=busy||!!state.result||!!error;
   button.onclick=()=>{plan.research=id;if(plan.scholarshipTech&&plan.scholarshipTech!==id)delete plan.scholarshipTech;save();refresh();toast(`${t.name} 연구 선택 · 턴 종료 시 RP 투자`);};techList.append(button);
  }
- $('#bankResearch').disabled=busy||!!state.result;$('#bankResearch').onclick=()=>{plan.research=null;delete plan.scholarshipTech;save();refresh();};
+ if($('#growthDialog').open)requestAnimationFrame(renderTreeConnections);
+  $('#bankResearch').disabled=busy||!!state.result;$('#bankResearch').onclick=()=>{plan.research=null;delete plan.scholarshipTech;save();refresh();};
  const scholarshipButton=$('#scholarshipResearch');const canDiscount=!!active&&(r.scholarship??0)>0&&!r.discounted?.[active]&&!hasTech(state,'ally',active)&&!canResearch(state,'ally',active);
  scholarshipButton.disabled=busy||!!state.result||(!plan.scholarshipTech&&!canDiscount);
  scholarshipButton.textContent=plan.scholarshipTech?'학문 할인 예약 취소':`성균관대 학문 사용 · ${r.scholarship??0}개 보유 (연구 -3 RP)`;

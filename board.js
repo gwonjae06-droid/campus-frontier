@@ -66,10 +66,14 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
      }
      for(let n=0;n<regions.length;n++){
       if(!regions[n].length)continue;
-      const fog=new T.InstancedMesh(new T.BoxGeometry(1.103,.03,1.103),
-       new T.MeshBasicMaterial({color:n===0?'#344b52':'#a3b0a0',transparent:true,opacity:n===0?.92:.35,depthWrite:false,side:T.DoubleSide}),regions[n].length);
+      // Occupy the full line of sight above each concealed tile. A flat
+      // horizontal overlay let shallow camera rays slip beneath it.
+      // Camera minimum altitude is 38*sin(18°)>11, so the 9.1-high roof
+      // stays below the camera while walls extend down through the terrain.
+      const fog=new T.InstancedMesh(new T.BoxGeometry(1.107,9.4,1.107),
+       new T.MeshBasicMaterial({color:n===0?'#283943':'#8c9a90',transparent:true,opacity:n===0?.98:.72,depthWrite:true,side:T.DoubleSide}),regions[n].length);
       const helper=new T.Object3D();
-      regions[n].forEach(({x,z},i)=>{helper.position.set(coord(x),1.75,coord(z));helper.updateMatrix();fog.setMatrixAt(i,helper.matrix);});
+      regions[n].forEach(({x,z},i)=>{helper.position.set(coord(x),4.4,coord(z));helper.updateMatrix();fog.setMatrixAt(i,helper.matrix);});
       fog.instanceMatrix.needsUpdate=true;fog.renderOrder=8;fog.userData.ownMaterial=true;dynamic.add(fog);
      }
     }else{tent.visible=true;rivalCampus.visible=true;}

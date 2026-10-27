@@ -1,0 +1,98 @@
+/* v1.1 · One compact campaign panel, permanently accessible camera controls, connected skill tree. */
+.rivalry-story{padding:12px 0 13px;border-bottom:1px solid #dae1d3;}
+.rivalry-story p{margin:0 0 12px;font-size:12px;line-height:1.85;letter-spacing:-.2px;color:#5c735f;word-break:keep-all;}
+.rivalry-story p strong{font-weight:800;color:#284d39}
+.rivalry-rivals{display:flex;gap:7px;flex-wrap:wrap;}
+.rivalry-rivals span{display:flex;gap:8px;align-items:center;justify-content:space-between;flex:1 1 105px;
+ border:1px solid #d6dfd2;border-radius:9px;background:#edf3e9;padding:7px 9px;font-size:10px;color:#627566}
+.rivalry-rivals b{color:#355947;font-size:11px;font-variant-numeric:tabular-nums;font-weight:800}
+#enemyBar[hidden],#rivalBar[hidden],#scoreBoard[hidden]{display:none!important}
+aside>.eyebrow,aside>h1{display:none!important}
+aside .rivalry-story{display:block!important}
+aside .campus-card{margin-bottom:3px}
+
+/* The '시점' disclosure is gone. Sliders are always visible, even on touch screens. */
+.view-controls{top:82px!important;right:14px!important;left:auto!important;width:242px;max-width:calc(100vw - 24px)!important;
+ gap:5px;display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;z-index:23}
+.view-controls>.zoom-shortcut{position:relative;order:1;width:38px!important;min-width:38px!important;height:38px!important;
+ border-radius:12px;font-size:21px!important}
+.view-controls>#zoomOut{order:0}
+.view-controls>.view-panel{order:2;position:static!important;display:grid!important;grid-template-columns:1fr 1fr;
+ flex:1 0 100%;width:100%!important;max-width:none;padding:9px!important;gap:7px 6px;box-shadow:0 8px 25px rgba(31,54,38,.12);
+ border-radius:13px;background:rgba(255,253,246,.87);border:1px solid rgba(255,255,255,.75);
+ backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.view-panel .pitch-control,.view-panel .zoom-control{display:flex!important;width:auto!important;min-width:0;
+ flex-direction:column;align-items:stretch;gap:3px!important;justify-content:initial!important;
+ padding:4px 6px!important;background:rgba(234,241,229,.85)!important;border-radius:8px;box-shadow:none}
+.view-panel .pitch-control span,.view-panel .zoom-control span{display:flex;justify-content:space-between;font-size:10px;
+ font-weight:700;color:#406049;white-space:nowrap}
+.view-panel .pitch-control output,.view-panel .zoom-control output{font-variant-numeric:tabular-nums;font-size:10px}
+.view-panel .pitch-control input,.view-panel .zoom-control input{width:100%!important;max-width:none!important;
+ min-width:0!important;height:13px;margin:0;accent-color:#347253;}
+.view-panel .camera-extras{grid-column:1/-1;display:flex;gap:4px;justify-content:flex-end}
+.view-panel .camera-extras button{flex:1 1 0;width:auto!important;min-width:0!important;height:30px!important;
+ padding:2px 5px;border-radius:7px;background:#e8efe2;font-size:12px!important;font-weight:750}
+.view-panel .camera-extras #resetView{background:#d2e5d2;color:#28583e}
+body:not(.camera-open) .view-panel{display:grid!important}
+
+/* Research tree — prerequisites run left to right and connect from parent to child. */
+#growthDialog{width:min(950px,96vw)!important;max-width:950px!important;padding:23px!important}
+#growthDialog>h2{font-size:19px;letter-spacing:-.6px}
+#researchSummary{border-radius:11px;background:#e9f1e6;padding:10px 12px;font-size:12px}
+.skill-tree-scroll{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+ scrollbar-width:thin;scrollbar-color:#b2c6b1 #eff2e9;padding:8px 6px 14px;
+ border-radius:16px;background:linear-gradient(145deg,#f2f5ef,#e6ede4);border:1px solid #d1ddcd}
+#techList.skill-tree{position:relative;display:grid;grid-template-columns:repeat(3,minmax(188px,1fr));
+ grid-template-rows:repeat(6,minmax(108px,auto));column-gap:52px;row-gap:16px;
+ min-width:700px;padding:17px 13px;isolation:isolate}
+#techList .tech-card.skill-node{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:flex-start;
+ align-items:stretch;min-width:0;width:100%;min-height:102px;height:100%;padding:12px 12px 9px;
+ margin:0!important;border-radius:13px;text-align:left;transition:box-shadow .15s ease,border-color .15s ease,transform .15s ease;
+ background:#fcfdf9;box-shadow:0 3px 12px rgba(33,69,45,.07);border:1.5px solid #cbd6ca;opacity:1}
+#techList .tech-card.skill-node strong{font-size:12px;font-weight:800;color:#365944;line-height:1.4}
+#techList .tech-card.skill-node small{margin:6px 0 10px;font-size:10px;color:#82917d;line-height:1.4;flex:1}
+#techList .tech-card.skill-node.locked{background:#e3e9e1;border-color:#cbd3c9;opacity:.78;}
+#techList .tech-card.skill-node.locked strong{color:#798578}
+#techList .tech-card.skill-node.unlocked{background:#fffdf4;border-color:#b3c9b3}
+#techList .tech-card.skill-node.active{background:#fff7e4;border:2px solid #d4a343;box-shadow:0 5px 21px rgba(191,139,56,.21)}
+#techList .tech-card.skill-node.completed{background:#e0efe2;border:1.5px solid #579a70}
+#techList .tech-card.skill-node.completed strong{color:#1b6643}
+#techList .tech-card.skill-node:enabled:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(35,70,48,.15)}
+#techList .tech-progress{display:block;flex:0 0 auto;height:5px;width:100%;background:#d8ded3;border-radius:999px;overflow:hidden}
+#techList .tech-progress i{display:block;height:100%;border-radius:999px;background:#d4a343;transition:width .2s}
+#techList .completed .tech-progress i{width:100%!important;background:#4c9c6d}
+#techList .skill-links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1}
+#techList .skill-link{fill:none;stroke:#a9b6a8;stroke-width:2.6;stroke-linecap:round}
+#techList .skill-link.locked{stroke:#bdc8bd;stroke-dasharray:5 6}
+#techList .skill-link.available{stroke:#88b68c;stroke-width:3}
+#techList .skill-link.selected{stroke:#d6a13f;stroke-width:4}
+#techList .skill-link.completed{stroke:#429867;stroke-width:4}
+.skill-tree-help{font-size:10px!important;color:#718172;line-height:1.65;margin:9px 3px 14px!important}
+
+/* Small screen: keep the large map, tuck the story inside the existing info drawer. */
+@media(max-width:760px){
+ .rivalry-story p{font-size:11px;line-height:1.65;margin:0 0 8px}
+ .rivalry-rivals span{font-size:9px;padding:6px 7px}
+ .view-controls{top:110px!important;right:9px!important;width:188px;max-width:calc(100vw - 18px)!important;
+ gap:4px;align-items:flex-start}
+ .view-controls>.zoom-shortcut{min-width:33px!important;width:33px!important;height:34px!important;font-size:19px!important}
+ .view-controls>.view-panel{top:auto!important;width:100%!important;padding:6px!important;gap:4px!important;
+ border-radius:10px}
+ .view-panel .pitch-control,.view-panel .zoom-control{height:auto!important;min-height:0!important;padding:4px!important}
+ .view-panel .pitch-control span,.view-panel .zoom-control span{font-size:9px}
+ .view-panel .camera-extras button:not(#resetView){display:none}
+ .view-panel .camera-extras button{height:25px!important;font-size:12px}
+ .map-top{top:111px;max-width:43%}
+ body.panel-open .map-top{left:10px}
+ #growthDialog{width:96vw!important;max-width:96vw!important;padding:12px!important;max-height:89dvh}
+ #growthDialog>h2{font-size:17px}
+ #researchSummary{font-size:10px}
+ .skill-tree-scroll{padding:5px 4px 12px}
+ #techList.skill-tree{min-width:660px;grid-template-columns:repeat(3,minmax(177px,1fr));
+  column-gap:41px;row-gap:12px;grid-template-rows:repeat(6,minmax(99px,auto));padding:11px 8px}
+ #techList .tech-card.skill-node{min-height:99px;padding:10px 9px 8px}
+ #techList .tech-card.skill-node strong{font-size:11px}
+ #techList .tech-card.skill-node small{font-size:9px}
+}
+@media(max-width:375px){.view-controls{width:174px}}
+@media(prefers-reduced-motion:reduce){#techList .skill-node{transition:none!important}}
