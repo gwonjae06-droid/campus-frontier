@@ -14,7 +14,7 @@ assert.equal(ownerOfTerritory(s,15,17),'enemy');
 
 let contact=initialState('standard');
 contact.units=[{id:'a1',team:'ally',kind:'scout',hp:7,x:11,z:10},
-               {id:'e1',team:'enemy',kind:'infantry',hp:10,x:13,z:10}];
+               {id:'e1',team:'enemy',kind:'infantry',hp:10,x:12,z:10}];
 rememberExploration(contact);
 assert.ok(targets(contact,contact.units[0]).some(t=>t.kind==='unit'&&t.id==='e1'));
 assert.ok(contact.lastSeen.ally.e1);
@@ -22,7 +22,7 @@ contact.units[0].x=3;contact.units[0].z=5;
 rememberExploration(contact);
 assert.ok(contact.lastSeen.ally.e1,'last seen memory must survive retreat');
 assert.ok(!targets(contact,contact.units[0]).some(t=>t.id==='e1'),'cannot attack last-seen ghost');
-assert.ok(exploredTiles(contact,'ally').has('13,10'));
+assert.ok(exploredTiles(contact,'ally').has('12,10'));
 
 assert.equal(canProposeCeasefire(s,'ally','enemy'),null);
 assert.ok(aiAcceptsCeasefire(s,'enemy'));
