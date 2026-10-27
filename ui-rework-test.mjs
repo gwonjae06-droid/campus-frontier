@@ -36,7 +36,7 @@ assert.ok(yBottom<0);
 assert.ok(yTop<orbitPosition(0,MIN_PITCH).y);
 assert.ok(yTop<orbitPosition(0,MAX_PITCH).y);
 assert.ok(board.includes('BoxGeometry(1.108,.075,1.108)'));
-assert.ok(board.includes('groundTiles)g.visible'));
+assert.ok(board.includes('for(const [k,g] of groundTiles)'));
 assert.ok(board.includes('fog.frustumCulled=false'));
 assert.ok(board.includes('transparent:false'));
 assert.ok(board.includes('makeRivalCampus'));
