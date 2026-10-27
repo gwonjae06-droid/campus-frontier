@@ -89,7 +89,7 @@ assert.ok(p.every(v=>v.claimed===false&&v.amount>=3));
 const html=readFileSync('index.html','utf8'),home=readFileSync('arena-app.js','utf8'),
       ui=readFileSync('sequential-app.js','utf8'),board=readFileSync('board.js','utf8');
 assert.ok(html.includes('sequential-v4.css?v=42'));
-assert.ok(home.includes('universityChoice')&&home.includes('sequential-app.js?v=5'));
+assert.ok(home.includes('universityChoice')&&home.includes('sequential-app.js?v=42'));
 assert.ok(ui.includes('endSequentialRound(')&&ui.includes('applySequentialAction('));
 assert.ok(ui.includes('seqCityPanel')&&ui.includes('seqTechOptions'));
 assert.ok(board.includes("state.playerTeam??'ally'"));
