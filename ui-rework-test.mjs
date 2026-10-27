@@ -31,12 +31,19 @@ for(const [id,t] of Object.entries(TECHS))if(t.requires){
 
 // Ray-camera invariant: in every legal pitch camera is outside the fog
 // prism, which extends from -0.3 to 9.1, fully enclosing terrain.
-const yTop=4.4+9.4/2,yBottom=4.4-9.4/2;
+const yTop=.025+.075/2,yBottom=.025-.075/2;
 assert.ok(yBottom<0);
 assert.ok(yTop<orbitPosition(0,MIN_PITCH).y);
 assert.ok(yTop<orbitPosition(0,MAX_PITCH).y);
-assert.ok(board.includes('BoxGeometry(1.107,9.4,1.107)'));
-assert.ok(board.includes('helper.position.set(coord(x),4.4,coord(z))'));
+assert.ok(board.includes('BoxGeometry(1.108,.075,1.108)'));
+assert.ok(board.includes('groundTiles)g.visible'));
+assert.ok(board.includes('fog.frustumCulled=false'));
+assert.ok(board.includes('transparent:false'));
+assert.ok(board.includes('makeRivalCampus'));
+assert.ok(board.includes('coord(3.5)'));
+assert.ok(!board.includes('BoxGeometry(1.107,9.4,1.107)'));
+assert.ok(game.includes('function treePosition(id)'));
+assert.ok(board.includes('helper.position.set(coord(x),.025,coord(z))'));
 assert.ok(board.includes('depthWrite:true'));
 assert.ok(board.includes('visibleTiles(state,\'ally\')'));
 console.log('PASS: concise rivalry HUD, 12-tech connected skill tree, camera controls without button, volumetric fog geometry');

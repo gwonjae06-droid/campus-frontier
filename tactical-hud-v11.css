@@ -43,7 +43,7 @@ body:not(.camera-open) .view-panel{display:grid!important}
  scrollbar-width:thin;scrollbar-color:#b2c6b1 #eff2e9;padding:8px 6px 14px;
  border-radius:16px;background:linear-gradient(145deg,#f2f5ef,#e6ede4);border:1px solid #d1ddcd}
 #techList.skill-tree{position:relative;display:grid;grid-template-columns:repeat(3,minmax(188px,1fr));
- grid-template-rows:repeat(6,minmax(108px,auto));column-gap:52px;row-gap:16px;
+ grid-template-rows:repeat(4,minmax(108px,auto));column-gap:52px;row-gap:16px;
  min-width:700px;padding:17px 13px;isolation:isolate}
 #techList .tech-card.skill-node{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:flex-start;
  align-items:stretch;min-width:0;width:100%;min-height:102px;height:100%;padding:12px 12px 9px;
@@ -89,10 +89,29 @@ body:not(.camera-open) .view-panel{display:grid!important}
  #researchSummary{font-size:10px}
  .skill-tree-scroll{padding:5px 4px 12px}
  #techList.skill-tree{min-width:660px;grid-template-columns:repeat(3,minmax(177px,1fr));
-  column-gap:41px;row-gap:12px;grid-template-rows:repeat(6,minmax(99px,auto));padding:11px 8px}
+  column-gap:41px;row-gap:12px;grid-template-rows:repeat(4,minmax(99px,auto));padding:11px 8px}
  #techList .tech-card.skill-node{min-height:99px;padding:10px 9px 8px}
  #techList .tech-card.skill-node strong{font-size:11px}
  #techList .tech-card.skill-node small{font-size:9px}
 }
 @media(max-width:375px){.view-controls{width:174px}}
 @media(prefers-reduced-motion:reduce){#techList .skill-node{transition:none!important}}
+
+/* v1.2: readable school names and clearer 4x4 campus quick panel */
+.rivalry-rivals{display:flex;flex-direction:column;gap:6px}
+.rivalry-rivals span{flex:none;min-width:0;width:100%;gap:10px;font-size:11px;padding:9px 10px}
+.rivalry-rivals b{flex:none;white-space:nowrap}
+#growthDialog>.skill-tree-scroll{display:block;min-height:130px}
+#growthDialog #techList .tech-card{display:flex!important;visibility:visible!important}
+#growthDialog #techList .tech-card:disabled{pointer-events:none;opacity:.8}
+@media(max-width:760px){
+ .rivalry-rivals span{font-size:10px;min-height:33px}
+ .view-controls{right:8px!important;top:116px!important}
+ .view-controls>.view-panel{background:rgba(255,253,246,.93)}
+ #growthDialog .skill-tree-scroll{display:block!important}
+}
+
+/* One-tap research access without opening the information drawer. */
+header .header-research{height:46px;min-width:54px;padding:0 10px;background:#e2eee1;border:1px solid #b6d1b8;border-radius:13px;font-size:12px;font-weight:800;color:#28563f;box-shadow:0 6px 20px rgba(30,57,40,.09)}
+header .header-research:focus-visible{outline:3px solid #d6a54c}
+@media(max-width:760px){header .header-research{order:2;height:39px;min-width:43px;padding:0 7px;font-size:11px}header #panelToggle{order:3;width:46px!important}header #help{order:1}}

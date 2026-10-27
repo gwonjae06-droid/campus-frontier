@@ -12,7 +12,7 @@ export const TECHS={
  advanced:{name:'전문 연구',cost:14,requires:'methodology',effect:'종합 프로젝트를 향한 전문 연구'},
  integrated:{name:'종합 프로젝트',cost:20,requires:'advanced',effect:'캠퍼스 종합 프로젝트 · OP 15 / 3턴 / 완료 +10점'}
 };
-export const DEPOSITS=[{x:5,z:5,site:'home'},{x:8,z:7,site:'8,6'},{x:6,z:8,site:'6,9'}];
+export const DEPOSITS=[{x:6,z:5,site:'home'},{x:8,z:7,site:'8,6'},{x:6,z:8,site:'6,9'}];
 export const PROJECTS={develop:{name:'자원 개발',cost:3},economy:{name:'경제 특화',cost:6},science:{name:'연구 특화',cost:6},military:{name:'군사 특화',cost:6},lab:{name:'연구 시설',cost:6},wide:{name:'광역 관리',cost:0},grand:{name:'종합 프로젝트',cost:15}};
 export const newResearch=()=>({active:null,bank:0,progress:{},done:[],scholarship:0,discounted:{}});
 export const hasTech=(s,team,id)=>s.research[team].done.includes(id);

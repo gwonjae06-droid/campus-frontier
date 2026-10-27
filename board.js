@@ -3,6 +3,7 @@ import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
 import {SIZE,terrain,isCampus,key,stats,reachable,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
 import {makeCampus} from './campus.js';
+import {makeRivalCampus} from './rival-campuses.js?v=12';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
 export const coord=n=>(n-(SIZE-1)/2)*1.12;
@@ -15,66 +16,60 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   function box(parent,w,h,d,color,x,y,z){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),mat(color));mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
   function cone(parent,r,h,color,x,y,z,n=5){const mesh=new T.Mesh(new T.ConeGeometry(r,h,n),mat(color));mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh;}
   function flag(parent,x,y,z,color){box(parent,.025,.6,.025,'#a18b69',x,y+.3,z);box(parent,.32,.19,.025,color,x+.16,y+.48,z);}
+  const groundTiles=new Map();
   for(let z=0;z<SIZE;z++)for(let x=0;x<SIZE;x++){
+    const cell=new T.Group();groundTiles.set(tileKey(x,z),cell);world.add(cell);
     const type=terrain(x,z),water=type==='water',color=water?'#65b4bf':isCampus(x,z)?'#5c9672':type==='resource'?'#d6bb76':(x+z)%3===0?'#abc587':'#b5cc91';
-    const tile=box(world,1.095,.3,1.095,color,coord(x),-.15,coord(z));tile.userData.tile={x,z,type};tilePicks.push(tile);
-    if(type==='hill')cone(world,.53,.68,'#9dae97',coord(x),.38,coord(z),5);
-    if(type==='forest'){box(world,.07,.4,.07,'#887357',coord(x),.2,coord(z));cone(world,.3,.7,'#427351',coord(x),.7,coord(z));}
-    if(type==='water')box(world,.33,.012,.025,'#a9d9d7',coord(x),.015,coord(z));
-    if(type==='resource'){const central=x===10&&z===10;box(world,central?.94:.58,.2,central?.94:.58,central?'#e9c46e':'#e6d39c',coord(x),.1,coord(z));cone(world,central?.33:.21,central?.68:.42,central?'#bd8438':'#be9850',coord(x),central?.55:.4,coord(z),central?6:4);}
+    const tile=box(cell,1.095,.3,1.095,color,coord(x),-.15,coord(z));tile.userData.tile={x,z,type};tilePicks.push(tile);
+    if(type==='hill')cone(cell,.53,.68,'#9dae97',coord(x),.38,coord(z),5);
+    if(type==='forest'){box(cell,.07,.4,.07,'#887357',coord(x),.2,coord(z));cone(cell,.3,.7,'#427351',coord(x),.7,coord(z));}
+    if(type==='water')box(cell,.33,.012,.025,'#a9d9d7',coord(x),.015,coord(z));
+    if(type==='resource'){const central=x===10&&z===10;box(cell,central?.94:.58,.2,central?.94:.58,central?'#e9c46e':'#e6d39c',coord(x),.1,coord(z));cone(cell,central?.33:.21,central?.68:.42,central?'#bd8438':'#be9850',coord(x),central?.55:.4,coord(z),central?6:4);}
   }
-  const campus=makeCampus(data);campus.group.position.set(coord(3),.02,coord(3));world.add(campus.group);
-  const outline=new T.LineLoop(new T.BufferGeometry().setFromPoints([new T.Vector3(-1.67,.12,-1.67),new T.Vector3(1.67,.12,-1.67),new T.Vector3(1.67,.12,1.67),new T.Vector3(-1.67,.12,1.67)]),new T.LineBasicMaterial({color:'#e4be65'}));campus.group.add(outline);
+  const campus=makeCampus(data);campus.group.position.set(coord(3.5),0,coord(3.5));world.add(campus.group);
+  const outline=new T.LineLoop(new T.BufferGeometry().setFromPoints([new T.Vector3(-2.18,.07,-2.18),new T.Vector3(2.18,.07,-2.18),new T.Vector3(2.18,.07,2.18),new T.Vector3(-2.18,.07,2.18)]),new T.LineBasicMaterial({color:'#e4be65'}));campus.group.add(outline);
   flag(world,coord(4)+.42,.25,coord(4)+.42,'#24855f');
-  const tent=new T.Group();tent.position.set(coord(ENEMY_BASE.x),0,coord(ENEMY_BASE.z));
- box(tent,2.95,.1,2.95,'#b8a58d',0,.02,0);
- for(const [x,z,sz] of [[0,0,1],[-.8,-.5,.75],[.9,.45,.72],[-.5,.9,.6],[.7,-.8,.54]]){
-   box(tent,.62*sz,.7*sz,.61*sz,'#bb7c68',x,.4*sz,z);
-   cone(tent,.47*sz,.37*sz,'#765c56',x,.95*sz,z,4);
- }flag(tent,1.1,.65,-1.0,'#b84f3e');world.add(tent);
- const rivalCampus=new T.Group();rivalCampus.position.set(coord(RIVAL_BASE.x),0,coord(RIVAL_BASE.z));
- box(rivalCampus,2.95,.1,2.95,'#b9c5d4',0,.02,0);
- for(const [x,z,scale] of [[0,0,1],[-.8,.65,.7],[.8,-.5,.9],[.6,.7,.6],[-.7,-.7,.58]]){
-   box(rivalCampus,.55*scale,.7*scale,.65*scale,'#849eb9',x,.35*scale,z);
-   cone(rivalCampus,.4*scale,.35*scale,'#4b6f98',x,.9*scale,z,4);
- }flag(rivalCampus,1.1,.65,1,'#5979bf');world.add(rivalCampus);
+  const korea=makeRivalCampus('korea'),yonsei=makeRivalCampus('yonsei');
+  const tent=korea.group,rivalCampus=yonsei.group;
+  tent.position.set(coord(16.5),0,coord(16.5));rivalCampus.position.set(coord(16.5),0,coord(3.5));
+  world.add(tent,rivalCampus);
   box(world,SIZE*1.14,.14,SIZE*1.14,'#d1dacb',0,-.4,0);
-  function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(2.9,.51,1);world.add(s);return s;}
-  const labels=[label(`성균관대 · ${data.buildings.length}개 건물`,coord(3),1.3,coord(2),'#285e46'),label('고려대 AI · 임시 캠퍼스',coord(17),1.5,coord(17),'#a9624c'),label('연세대 AI · 임시 캠퍼스',coord(17),1.5,coord(3),'#506d9d'),label('중앙 거점 · 5점',coord(10),1.65,coord(10),'#a6782a')];
+  function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58,488);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(4.1,.58,1);world.add(s);return s;}
+  const labels=[label('성균관대학교 인문사회과학캠퍼스',coord(3.5),1.5,coord(2),'#285e46'),label('고려대학교 안암캠퍼스',coord(16.5),1.5,coord(17),'#a9624c'),label('연세대학교 신촌캠퍼스',coord(16.5),1.5,coord(3),'#506d9d'),label('중앙 거점 · 5점',coord(10),1.65,coord(10),'#a6782a')];
   let dynamic=new T.Group(),preview=new T.Group();world.add(dynamic,preview);let unitMeshes=new Map(),currentState=null;
   function cleanup(g){g.traverse(o=>{o.geometry?.dispose();if(o.material&&!materials.has(o.material.color?.getStyle())){if(o.userData.ownMaterial)o.material.dispose();}});world.remove(g);}
   function createUnit(u,parent){const g=new T.Group();g.position.set(coord(u.x),0,coord(u.z));const color=u.team==='ally'?'#276b51':u.team==='rival'?'#536fa8':'#b65c47';box(g,u.kind==='siege'?.48:.24,u.kind==='siege'?.22:.3,u.kind==='siege'?.34:.22,color,0,.24,0);if(u.kind==='cavalry')box(g,.38,.2,.54,'#9b7957',0,.19,0);if(u.kind==='siege'){box(g,.48,.07,.13,'#665e4b',0,.48,-.15);for(const x of [-.2,.2])cone(g,.1,.16,'#68593f',x,.11,.24,8);}box(g,.21,.19,.2,'#ead6af',0,.5,0);cone(g,.2,u.kind==='scout'?.28:.16,color,0,.67,0,4);box(g,.05,.35,.05,'#8d8971',.19,.36,0);box(g,.5,.045,.065,'#596a57',0,.84,0);box(g,.5*u.hp/stats(u).hp,.05,.07,u.team==='ally'?'#4dbb81':u.team==='rival'?'#9bbaff':'#ec9673',-.25+.25*u.hp/stats(u).hp,.846,0);g.userData.unitId=u.id;parent.add(g);return g;}
   function structure(s,parent,ghost=false){const g=new T.Group();g.position.set(coord(s.x),ghost?.04:0,coord(s.z));if(s.type==='wall'){box(g,.96,.48,.45,ghost?'#e6ca83':'#d8cfb4',0,.24,0);for(let i=-1;i<=1;i++)box(g,.2,.18,.48,'#e9dfc3',i*.34,.57,0);}else if(['recruit','scout','siege','cavalry'].includes(s.type)){const kind=s.type==='recruit'?'infantry':s.type;createUnit({id:'planned',team:'ally',kind,hp:stats({kind}).hp,x:0,z:0},g).position.set(0,0,0);}else{box(g,.54,.8,.54,ghost?'#e4c984':'#d9d1b8',0,.4,0);cone(g,.5,.4,'#396e54',0,1,0,4);flag(g,.2,1,.1,'#3ca572');}if(ghost)g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.6;o.userData.ownMaterial=true;}});parent.add(g);}
   function marker(parent,x,z,color,y=.025){const m=new T.Mesh(new T.BoxGeometry(1.02,.035,1.02),new T.MeshBasicMaterial({color,transparent:true,opacity:.45,depthWrite:false}));m.position.set(coord(x),y,coord(z));m.userData.ownMaterial=true;parent.add(m);}
-  function sync(state,plan,selected,mode){currentState=state;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
+  function sync(state,plan,selected,mode){currentState=state;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||visible.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||visible.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
     for(const [id,o] of Object.entries(plan.orders)){const u=state.units.find(u=>u.id===id);if(!u)continue;if(o.type!=='move')marker(preview,u.x,u.z,o.type==='attack'?'#e09569':'#8cbccc');if(o.type==='move'){marker(preview,o.x,o.z,'#e9b84e');const line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(coord(u.x),.16,coord(u.z)),new T.Vector3(coord(o.x),.16,coord(o.z))]),new T.LineBasicMaterial({color:'#bd8c2d'}));line.userData.ownMaterial=true;preview.add(line);}}
     const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move')for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');}
     for(const d of DEPOSITS){const developed=state.developed[`${d.x},${d.z}`];box(dynamic,.45,developed?.25:.08,.45,developed?'#73a5ac':'#bd9f61',coord(d.x),developed?.13:.04,coord(d.z));}
     for(const g of GATES)marker(preview,g.x,g.z,'#eac76c');
     for(const k of state.roads??[]){const [x,z]=k.split(',').map(Number);const m=new T.Mesh(new T.BoxGeometry(.83,.04,.26),mat('#cbb78c'));m.position.set(coord(x),.09,coord(z));dynamic.add(m);}
     if(state.grandConstruction||state.grandCompleted)flag(dynamic,coord(3)-.9,.3,coord(3)-.9,state.grandCompleted?'#e2b046':'#94a2ac');
-    for(const [k,owner] of Object.entries(state.points)){if(!owner||(state.gameMode==='standard'&&!explored.has(k)&&!visible.has(k)))continue;const [x,z]=k.split(',').map(Number);flag(dynamic,coord(x)+.25,.3,coord(z),owner==='ally'?'#2b8f63':owner==='rival'?'#4d75ad':'#bb6048');}
+    for(const [k,owner] of Object.entries(state.points)){if(!owner||(state.gameMode==='standard'&&!visible.has(k)))continue;const [x,z]=k.split(',').map(Number);flag(dynamic,coord(x)+.25,.3,coord(z),owner==='ally'?'#2b8f63':owner==='rival'?'#4d75ad':'#bb6048');}
     if(state.gameMode==='standard'){
      const baseKnown=(x,z)=>{for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)if(explored.has(tileKey(x+dx,z+dz)))return true;return false;};
-     tent.visible=baseKnown(17,17);rivalCampus.visible=baseKnown(17,3);
-     labels[1].visible=baseKnown(17,17)&&!focus;
-     labels[2].visible=baseKnown(17,3)&&!focus;
+     // Capital silhouettes are known from the start; troops remain hidden by vision.
+     tent.visible=true;rivalCampus.visible=true;
+     labels[1].visible=!focus;
+     labels[2].visible=!focus;
      labels[3].visible=(explored.has('10,10')||visible.has('10,10'))&&!focus;
      const regions=[[],[]];
      for(let z=0;z<SIZE;z++)for(let x=0;x<SIZE;x++){
-      const k=tileKey(x,z);if(!visible.has(k))regions[explored.has(k)?1:0].push({x,z});
+      const k=tileKey(x,z);if(!visible.has(k)&&!['campus','enemy-base','rival-base'].includes(terrain(x,z)))regions[explored.has(k)?1:0].push({x,z});
      }
+     // Pitch-independent fog: conceal scenery and replace the cell with
+     // opaque terrain-level shading. No floating roofs or fragile alpha order.
      for(let n=0;n<regions.length;n++){
       if(!regions[n].length)continue;
-      // Occupy the full line of sight above each concealed tile. A flat
-      // horizontal overlay let shallow camera rays slip beneath it.
-      // Camera minimum altitude is 38*sin(18°)>11, so the 9.1-high roof
-      // stays below the camera while walls extend down through the terrain.
-      const fog=new T.InstancedMesh(new T.BoxGeometry(1.107,9.4,1.107),
-       new T.MeshBasicMaterial({color:n===0?'#283943':'#8c9a90',transparent:true,opacity:n===0?.98:.72,depthWrite:true,side:T.DoubleSide}),regions[n].length);
+      const fog=new T.InstancedMesh(new T.BoxGeometry(1.108,.075,1.108),
+       new T.MeshBasicMaterial({color:n===0?'#344b57':'#91a4a1',depthWrite:true,transparent:false}),regions[n].length);
+      fog.frustumCulled=false;
       const helper=new T.Object3D();
-      regions[n].forEach(({x,z},i)=>{helper.position.set(coord(x),4.4,coord(z));helper.updateMatrix();fog.setMatrixAt(i,helper.matrix);});
-      fog.instanceMatrix.needsUpdate=true;fog.renderOrder=8;fog.userData.ownMaterial=true;dynamic.add(fog);
+      regions[n].forEach(({x,z},i)=>{helper.position.set(coord(x),.025,coord(z));helper.updateMatrix();fog.setMatrixAt(i,helper.matrix);});
+      fog.instanceMatrix.needsUpdate=true;fog.userData.ownMaterial=true;dynamic.add(fog);
      }
     }else{tent.visible=true;rivalCampus.visible=true;}
   }
@@ -133,7 +128,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange){
   canvas.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom-e.deltaY*.0018)},{passive:false});
   function setPitch(value){pitch=clampPitch(value);resize();}
   function resetView(){pitch=DEFAULT_PITCH;angle=Math.PI/4;setFocus(false);}
-  function setFocus(value){focus=value;zoom=value?4.4:1;target=value?new T.Vector3(coord(3),.25,coord(3)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
+  function setFocus(value){focus=value;zoom=value?4.4:1;target=value?new T.Vector3(coord(3.5),.25,coord(3.5)):new T.Vector3();labels.forEach(s=>s.visible=!value);resize();}
   function rotate(d){angle+=d*Math.PI/2;resize();}
   function zoomBy(d){setZoom(zoom+d);}
   async function animate(before,after,events,onPhase){

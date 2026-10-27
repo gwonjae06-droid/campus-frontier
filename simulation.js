@@ -5,17 +5,17 @@ import {isCeasefire,violatesCeasefire,canProposeCeasefire,resolveDiplomacy} from
 export const SIZE=21, TURN_LIMIT=30, CENTRAL_POINT='10,10';
 export const POINT_KEYS=['8,6','6,9','6,3','13,14','16,12','12,17',CENTRAL_POINT];
 export const PRICE={wall:3,tower:7,recruit:5,scout:4,siege:9,cavalry:8,road:1};
-export const CAMPUS={x:2,z:2,size:3},HOME={x:3,z:3},ENEMY_BASE={x:17,z:17};
-export const GATES=[{x:3,z:1},{x:5,z:3},{x:3,z:5},{x:1,z:3}];
-export const ENEMY_GATES=[{x:17,z:15},{x:19,z:17},{x:17,z:19},{x:15,z:17}];
+export const CAMPUS={x:2,z:2,size:4},HOME={x:3,z:3},ENEMY_BASE={x:17,z:17};
+export const GATES=[{x:3,z:1},{x:6,z:3},{x:3,z:6},{x:1,z:3}];
+export const ENEMY_GATES=[{x:17,z:14},{x:19,z:17},{x:17,z:19},{x:14,z:17}];
 export const RIVAL_BASE={x:17,z:3};
-export const RIVAL_GATES=[{x:17,z:1},{x:19,z:3},{x:17,z:5},{x:15,z:3}];
-export const isRivalCampus=(x,z)=>x>=16&&x<=18&&z>=2&&z<=4;
-export const isEnemyCampus=(x,z)=>x>=16&&x<=18&&z>=16&&z<=18;
+export const RIVAL_GATES=[{x:17,z:1},{x:19,z:3},{x:17,z:6},{x:14,z:3}];
+export const isRivalCampus=(x,z)=>x>=15&&x<=18&&z>=2&&z<=5;
+export const isEnemyCampus=(x,z)=>x>=15&&x<=18&&z>=15&&z<=18;
 export const STATS={infantry:{name:'보병',hp:10,attack:4,defense:2,move:1},scout:{name:'정찰대',hp:7,attack:2,defense:1,move:2,range:1},siege:{name:'공성대',hp:8,attack:3,defense:1,move:1,range:2},cavalry:{name:'기동대',hp:9,attack:4,defense:1,move:2,range:1}};
 export const key=(x,z)=>`${x},${z}`;
 export const distance=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.z-b.z);
-export const isCampus=(x,z)=>x>=2&&x<=4&&z>=2&&z<=4;
+export const isCampus=(x,z)=>x>=2&&x<=5&&z>=2&&z<=5;
 export const stats=u=>STATS[u.kind??'infantry'];
 export function terrain(x,z){
  if(x<0||z<0||x>=SIZE||z>=SIZE)return 'void';
@@ -31,12 +31,12 @@ export function terrain(x,z){
 export const passable=(x,z)=>Number.isInteger(x)&&Number.isInteger(z)&&['grass','resource','forest','hill'].includes(terrain(x,z));
 export const emptyPlan=()=>({orders:{},builds:[],projects:[]});
 export function initialState(mode='practice'){const state={version:8,turn:1,gold:10,enemyGold:10,homeHP:30,enemyHP:30,result:null,
- units:[{id:'a1',team:'ally',kind:'infantry',x:5,z:3,hp:10},{id:'a2',team:'ally',kind:'scout',x:3,z:5,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:15,z:17,hp:10},{id:'e2',team:'enemy',kind:'scout',x:17,z:15,hp:7}],
+ units:[{id:'a1',team:'ally',kind:'infantry',x:6,z:3,hp:10},{id:'a2',team:'ally',kind:'scout',x:3,z:6,hp:7},{id:'e1',team:'enemy',kind:'infantry',x:14,z:17,hp:10},{id:'e2',team:'enemy',kind:'scout',x:17,z:14,hp:7}],
  research:{ally:newResearch(),enemy:newResearch()},specialties:{},developed:{},labs:{},labConstruction:{},grandConstruction:null,grandCompleted:false,wideSite:null,centralPoint:CENTRAL_POINT,roads:[],structures:[],pendingRecruits:[],points:Object.fromEntries(POINT_KEYS.map(k=>[k,null])),pointReady:{},nextId:3,victoryMode:null};
  if(mode==='standard'){
-   state.version=10;state.gameMode='standard';state.ceasefires={};state.rivalHP=30;state.rivalGold=10;
+   state.version=12;state.gameMode='standard';state.ceasefires={};state.rivalHP=30;state.rivalGold=10;
    state.research.rival=newResearch();state.capturePoints={ally:0,enemy:0,rival:0};
-   state.units.push({id:'r1',team:'rival',kind:'infantry',x:15,z:3,hp:10},{id:'r2',team:'rival',kind:'scout',x:17,z:5,hp:7});
+   state.units.push({id:'r1',team:'rival',kind:'infantry',x:14,z:3,hp:10},{id:'r2',team:'rival',kind:'scout',x:17,z:6,hp:7});
  }
  rememberExploration(state);
  return state;
@@ -51,7 +51,7 @@ export function victoryPoints(s,team='ally'){
  const grand=team==='ally'&&s.grandCompleted?10:0;
  return territory+research+alive+grand+(s.capturePoints?.[team]??0);
 }
-export function ownTerritory(s,u){return u.team==='ally'&&u.x>=1&&u.x<=5&&u.z>=1&&u.z<=5||u.team==='enemy'&&distance(u,ENEMY_BASE)<=2||u.team==='rival'&&distance(u,RIVAL_BASE)<=2||Object.entries(s.points).some(([k,t])=>{const [x,z]=k.split(',').map(Number);return t===u.team&&distance(u,{x,z})<=(s.wideSite===k?2:1);});}
+export function ownTerritory(s,u){return u.team==='ally'&&u.x>=1&&u.x<=6&&u.z>=1&&u.z<=6||u.team==='enemy'&&u.x>=14&&u.x<=19&&u.z>=14&&u.z<=19||u.team==='rival'&&u.x>=14&&u.x<=19&&u.z>=1&&u.z<=6||Object.entries(s.points).some(([k,t])=>{const [x,z]=k.split(',').map(Number);return t===u.team&&distance(u,{x,z})<=(s.wideSite===k?2:1);});}
 const neighbors=p=>[[1,0],[0,1],[-1,0],[0,-1]].map(([x,z])=>({x:p.x+x,z:p.z+z}));
 export function reachable(s,u,plan=emptyPlan()){
  const out=new Map(),queue=[{x:u.x,z:u.z,cost:0}];

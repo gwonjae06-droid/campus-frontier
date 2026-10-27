@@ -9,7 +9,7 @@ export function ownerOfTerritory(s,x,z){
  const d=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.z-b.z);
  for(const t of s.gameMode==='standard'?['ally','enemy','rival']:['ally','enemy']){
   const hp=t==='ally'?s.homeHP:t==='enemy'?s.enemyHP:s.rivalHP;
-  if(hp>0&&Math.abs(x-baseLocation(t).x)<=2&&Math.abs(z-baseLocation(t).z)<=2)return t;
+  if(hp>0&&(t==='ally'?x>=1&&x<=6&&z>=1&&z<=6:t==='enemy'?x>=14&&x<=19&&z>=14&&z<=19:x>=14&&x<=19&&z>=1&&z<=6))return t;
  }
  for(const [k,t] of Object.entries(s.points)){
   if(!t)continue;

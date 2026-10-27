@@ -8,15 +8,15 @@ const ids=[...html.matchAll(/\bid="([A-Za-z][A-Za-z0-9_-]*)"/g)].map(x=>x[1]);
 assert.equal(new Set(ids).size,ids.length,'duplicate DOM ids');
 const wired=[...game.matchAll(/\$\('#([A-Za-z][A-Za-z0-9_-]*)'\)/g)].map(x=>x[1]);
 for(const id of new Set(wired))assert.ok(ids.includes(id),`missing DOM element: #${id}`);
-for(const id of ['fogStatus','diplomacy','diplomacyDialog','truceEnemy','truceRival','scholarshipResearch','game','panelToggle','intelPanel','rpHud','scoreHud','viewPanel','zoomIn','zoomOut','pitch','zoomRange','resolve','orders','mobilePlan','creditsOpen']){
+for(const id of ['openResearch','fogStatus','diplomacy','diplomacyDialog','truceEnemy','truceRival','scholarshipResearch','game','panelToggle','intelPanel','rpHud','scoreHud','viewPanel','zoomIn','zoomOut','pitch','zoomRange','resolve','orders','mobilePlan','creditsOpen']){
  assert.ok(ids.includes(id),`missing vital game or overlay element: ${id}`);
 }
 for(const action of ['attack','guard','capture','heal']){
  assert.ok(html.includes(`data-action="${action}"`),`missing floating ${action} action`);
 }
 assert.ok(html.includes('overlay-ui.css?v=vision-v10'));
-assert.ok(html.includes('game.js?v=ui-v11'));
-assert.ok(html.includes('tactical-hud-v11.css?v=1'));
+assert.ok(html.includes('game.js?v=campus-v12'));
+assert.ok(html.includes('tactical-hud-v11.css?v=2'));
 assert.ok(!html.includes('id="viewToggle"'));
 assert.ok(!html.includes('id="selection"'));
 assert.ok(!html.includes('class="mission"'));
