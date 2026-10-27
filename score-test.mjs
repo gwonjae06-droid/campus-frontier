@@ -23,5 +23,5 @@ const even=initialState();even.turn=TURN_LIMIT;even.units=[];even.research.enemy
 assert.equal(draw.state.result,'draw');
 assert.equal(draw.state.victoryMode,'score');
 assert.equal(MIN_PITCH,70);assert.equal(MAX_PITCH,70);
-assert.equal(clampPitch(-100),56);assert.equal(clampPitch(100),70);
+assert.equal(clampPitch(-100),70);assert.equal(clampPitch(100),70);
 console.log('PASS: 7 outposts, central objective, score victory/draw, tech points, new camera bounds');
