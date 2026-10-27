@@ -1,11 +1,11 @@
 {
   "name": "campus-frontier",
-  "version": "1.8.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node test.mjs && node growth-test.mjs && node score-test.mjs && node mobile-expansion-test.mjs && node --check game.js && node --check board.js && node --check growth.js && node --check simulation.js && node --check touch-gestures.js && node ui-layout-test.mjs && node fullmap-test.mjs && node threeway-test.mjs && node scholarship-test.mjs && node --check vision.js && node --check diplomacy.js && node vision-diplomacy-test.mjs && node --check game.js && node --check board.js && node ui-rework-test.mjs && node --check campus.js && node --check rival-campuses.js && node campus-visual-test.mjs && node --check game.js && node --check board.js && node simple-game-test.mjs && node --check campus-scale.js && node campus-proportions-test.mjs && node --check urban-city.js && node modern-city-test.mjs && node fixed-camera-swipe-test.mjs && node --check vision.js && node permanent-exploration-test.mjs"
+    "test": "node test.mjs && node growth-test.mjs && node score-test.mjs && node mobile-expansion-test.mjs && node --check game.js && node --check board.js && node --check growth.js && node --check simulation.js && node --check touch-gestures.js && node ui-layout-test.mjs && node fullmap-test.mjs && node threeway-test.mjs && node scholarship-test.mjs && node --check vision.js && node --check diplomacy.js && node vision-diplomacy-test.mjs && node --check game.js && node --check board.js && node ui-rework-test.mjs && node --check campus.js && node --check rival-campuses.js && node campus-visual-test.mjs && node --check game.js && node --check board.js && node simple-game-test.mjs && node --check campus-scale.js && node campus-proportions-test.mjs && node --check urban-city.js && node modern-city-test.mjs && node fixed-camera-swipe-test.mjs && node --check vision.js && node permanent-exploration-test.mjs && node --check arena-app.js && node --check arena-engine.js && node --check arena-ranking.js && node --check arena-peer.js && node arena-test.mjs"
   },
   "engines": {
     "node": ">=18"
