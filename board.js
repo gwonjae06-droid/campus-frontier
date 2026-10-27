@@ -7,7 +7,7 @@ import {makeCampus} from './campus.js?v=22';
 import {CAMPUS_PLOT_WIDTH} from './campus-scale.js?v=15';
 import {addUrbanCell,CAMPUS_COLORS} from './urban-city.js?v=22';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
-import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=18';
+import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=42';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,swipePan} from './touch-gestures.js?v=17';
 export const coord=n=>(n-(SIZE-1)/2)*1.12;
 export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalData={}){

@@ -3,7 +3,7 @@
 // A player action commits immediately; the other two factions act strictly
 // after the human ends their turn. The legacy resolver/save is left intact.
 import {initialState,reachable,targets,stats,passable,terrain,distance,GATES,ENEMY_GATES,RIVAL_GATES,TURN_LIMIT,key,PRICE,unitCap,STATS} from './simulation.js?v=18';
-import {rememberExploration} from './vision.js?v=18';
+import {rememberExploration} from './vision.js?v=42';
 export const TEAMS=['ally','enemy','rival'];
 export const UNIVERSITY={
  ally:{label:'성균관대학교',campus:'인문사회과학캠퍼스',base:{x:3,z:3},gates:GATES,bank:'gold',hp:'homeHP'},

@@ -54,6 +54,6 @@ assert.ok(g.includes("if(state.gameMode==='standard'&&!discovered&&!currentSight
 assert.ok(g.includes("rememberExploration(state)"),'old saves must be reconciled on load');
 assert.ok(v.includes('s.lastKnownPoints??='));
 assert.ok(sim.includes("vision.js?v=18"),'turn resolution must use the updated exploration recorder');
-assert.ok(b.includes("vision.js?v=18"));
+assert.ok(b.includes("vision.js?v=42"));
 assert.ok(g.includes("vision.js?v=18"));
 console.log('PASS: permanent explored terrain, fog only on unexplored, live enemy concealment, last-seen flag ownership, old save compatibility');
