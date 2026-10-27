@@ -25,7 +25,7 @@ export function visibleTiles(s,team='ally'){
  }
  for(const u of s.units)if(u.team===team){
   const hill=u.x>=11&&u.x<=13&&u.z===3||u.z===0&&u.x<7;
-  reveal(u.x,u.z,(u.kind==='scout'?3:2)+(hill?1:0));
+  reveal(u.x,u.z,(u.kind==='scout'?3:2)+(hill?1:0)+(s.ruleset==='sequential'?(s.technologies?.[team]?.science??0)>=2?1:0:0));
  }
  return seen;
 }

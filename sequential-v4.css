@@ -1,0 +1,86 @@
+/* OLYMPUS · sequential-turn campaign v4 (non-destructive visual overlay) */
+.campus-choose{display:flex;flex-direction:column;gap:7px;margin:0 0 12px;color:#4b6666;font-size:11px;font-weight:700}
+.campus-choose select{display:block;min-height:48px;width:min(100%,340px);border:1px solid #b8c6b3;border-radius:8px;background:#fffdf6;color:#203e48;padding:9px 12px;font:inherit;font-size:13px}
+.hero-entry>button{width:min(100%,340px)!important}
+body.sequential-mode #battlefield header>:not(#backHome):not(.brand),
+body.sequential-mode #battlefield aside,
+body.sequential-mode #battlefield .bottom,
+body.sequential-mode #battlefield .map-top,
+body.sequential-mode #battlefield .view-controls,
+body.sequential-mode #battlefield .battle-legend,
+body.sequential-mode #battlefield .quick-actions,
+body.sequential-mode #battlefield #toast,
+body.sequential-mode #battlefield footer{display:none!important}
+body.sequential-mode #battlefield header{z-index:67!important;pointer-events:none;justify-content:flex-start!important}
+body.sequential-mode #battlefield header #backHome,
+body.sequential-mode #battlefield header .brand{pointer-events:auto}
+body.sequential-mode #battlefield #game{inset:74px 8px 110px!important;border-radius:12px}
+#seqUI{position:fixed;inset:0;z-index:65;pointer-events:none;color:#28434c}
+#seqUI>*{pointer-events:auto}
+#seqStats{position:absolute;top:84px;left:20px;display:flex;flex-direction:column;gap:4px;
+ padding:11px 14px;background:rgba(252,250,242,.96);border:1px solid #d3d5c9;border-radius:10px;
+ box-shadow:0 5px 19px #243e4520;max-width:min(420px,calc(100vw - 50px))}
+#seqStats .seq-school{display:flex;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap}
+#seqStats .seq-school small{font-size:11px;color:#56756b;font-weight:750}
+#seqStats .seq-school strong{color:#94763b}
+#seqStats .seq-resource{display:flex;gap:13px;font-size:12px;align-items:center;flex-wrap:wrap}
+#seqStats .seq-resource b{font-size:16px;color:#264e41}
+#seqStats .seq-resource small{font-size:10px;color:#648e64}
+#seqStats #seqUnits{color:#67766b;font-size:10px}
+#seqGuide{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);width:min(650px,calc(100vw - 28px));
+ text-align:center;display:flex;flex-direction:column;gap:4px}
+#seqGuide span{display:block;width:fit-content;margin:auto;max-width:100%;padding:7px 12px;background:rgba(252,251,245,.91);
+ border:1px solid #d6d9ce;border-radius:8px;box-shadow:0 3px 16px #263d341c;
+ font-size:11px;line-height:1.45;color:#3b5852}
+#seqGuide #seqMessage{color:#507254;font-weight:600}
+#seqControls{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:stretch;gap:7px;
+ width:min(650px,calc(100vw - 24px));padding:9px;background:rgba(251,249,241,.97);
+ border:1px solid #d0d7ca;border-radius:13px;box-shadow:0 8px 28px #14283036}
+#seqControls button{flex:1;min-width:0;min-height:53px;border-radius:8px;border:1px solid #c5d5c5;
+ background:#e8eee6;color:#315d46;font-weight:750;font-size:12px;padding:6px 7px;white-space:nowrap}
+#seqControls button small{display:block;margin-top:4px;font-size:9px;font-weight:500}
+#seqControls button.main-action{flex:1.45;background:#264e58;border-color:#264e58;color:#fff5d9}
+#seqControls button:disabled{opacity:.47;cursor:not-allowed}
+#seqControls button:focus-visible{outline:3px solid #d7a852}
+#seqCityPanel{position:absolute;bottom:125px;right:18px;display:flex;align-items:center;gap:8px;
+ background:rgba(255,251,239,.96);border:1px solid #cccfbd;padding:9px;border-radius:11px;box-shadow:0 5px 25px #203e4022}
+#seqCityPanel[hidden]{display:none!important}
+#seqCityPanel span{font-size:11px}
+#seqCityPanel button{background:#c59b50;color:#182f38;padding:9px;border-radius:8px;font-size:11px}
+#seqNew{position:absolute;top:100px;right:20px;background:#e9ebdf;color:#3b5751;
+ border:1px solid #bcc9bb;border-radius:8px;padding:9px 11px;font-size:11px}
+#seqResearch{width:min(660px,95vw);border:1px solid #d4c6a6;border-radius:15px;background:#fcfaf3;color:#274550;
+ padding:22px;max-height:85dvh;overflow:auto;box-shadow:0 25px 75px #111b2055}
+#seqResearch::backdrop{background:#101f2ab3;backdrop-filter:blur(3px)}
+#seqResearch>h2{font-size:20px;margin:0 0 10px}
+#seqResearch>p{color:#74837b;font-size:12px;line-height:1.7}
+#seqTechOptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px 0}
+#seqTechOptions .seq-tech-card{display:flex;align-items:start;flex-direction:column;gap:9px;min-height:96px;
+ background:#e9f1e9;border:1px solid #c6d7c3;border-radius:11px;padding:15px;text-align:left}
+#seqTechOptions .seq-tech-card strong{font-size:14px;color:#265543}
+#seqTechOptions .seq-tech-card small{font-size:11px;color:#547b65}
+#seqTechOptions .seq-tech-card:disabled{opacity:.52}
+#seqCloseTech{background:#264e58;color:white;padding:12px 22px;border-radius:9px;margin-top:8px}
+@media(max-width:760px){
+ body.sequential-mode #battlefield header{inset:8px 8px auto!important}
+ body.sequential-mode #battlefield header .brand{display:none}
+ body.sequential-mode #battlefield #game{inset:59px 0 95px!important;border-radius:0}
+ #seqStats{top:66px;left:7px;right:7px;max-width:none;gap:3px;padding:8px 10px}
+ #seqStats .seq-school{font-size:10px;gap:6px}
+ #seqStats .seq-school small{font-size:10px}
+ #seqStats .seq-resource{font-size:10px;gap:9px}
+ #seqStats .seq-resource b{font-size:13px}
+ #seqNew{top:13px;right:10px}
+ #seqControls{bottom:max(8px,env(safe-area-inset-bottom));width:calc(100vw - 14px);padding:6px;gap:4px}
+ #seqControls button{min-height:49px;font-size:10px;padding:5px 3px}
+ #seqControls button small{font-size:8px}
+ #seqControls button.main-action{flex:1.35;white-space:normal}
+ #seqGuide{bottom:83px;width:calc(100vw - 12px);gap:3px}
+ #seqGuide span{padding:5px 7px;font-size:10px}
+ #seqCityPanel{left:8px;right:8px;bottom:130px;justify-content:space-between}
+ #seqResearch{padding:14px;width:94vw}
+ #seqTechOptions{gap:7px}
+ #seqTechOptions .seq-tech-card{padding:11px;min-height:90px}
+ #seqTechOptions .seq-tech-card strong{font-size:12px}
+ .campus-choose select{width:100%}
+}

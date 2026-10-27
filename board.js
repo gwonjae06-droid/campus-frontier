@@ -69,7 +69,7 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
   function createUnit(u,parent){const g=unitModel(u,box,cone,mat);g.position.set(coord(u.x),0,coord(u.z));if(u.id!=='planned')unitBadge(u,g);parent.add(g);return g;}
   function structure(s,parent,ghost=false){const g=new T.Group();g.position.set(coord(s.x),ghost?.04:0,coord(s.z));if(s.type==='wall'){box(g,.96,.48,.45,ghost?'#e6ca83':'#d8cfb4',0,.24,0);for(let i=-1;i<=1;i++)box(g,.2,.18,.48,'#e9dfc3',i*.34,.57,0);}else if(['recruit','scout','siege','cavalry'].includes(s.type)){const kind=s.type==='recruit'?'infantry':s.type;createUnit({id:'planned',team:'ally',kind,hp:stats({kind}).hp,x:0,z:0},g).position.set(0,0,0);}else{box(g,.54,.8,.54,ghost?'#e4c984':'#d9d1b8',0,.4,0);cone(g,.5,.4,'#396e54',0,1,0,4);flag(g,.2,1,.1,'#3ca572');}if(ghost)g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.6;o.userData.ownMaterial=true;}});parent.add(g);}
   function marker(parent,x,z,color,y=.025){const m=new T.Mesh(new T.BoxGeometry(1.02,.035,1.02),new T.MeshBasicMaterial({color,transparent:true,opacity:.45,depthWrite:false}));m.position.set(coord(x),y,coord(z));m.userData.ownMaterial=true;parent.add(m);}
-  function sync(state,plan,selected,mode){currentState=state;currentMode=mode;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const visible=visibleTiles(state,'ally'),explored=exploredTiles(state,'ally');for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||explored.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team==='ally'||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||explored.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
+  function sync(state,plan,selected,mode){currentState=state;currentMode=mode;cleanup(dynamic);cleanup(preview);dynamic=new T.Group();preview=new T.Group();world.add(dynamic,preview);unitMeshes=new Map();const viewer=state.playerTeam??'ally',visible=visibleTiles(state,viewer),explored=exploredTiles(state,viewer);for(const [k,g] of groundTiles){const [x,z]=k.split(',').map(Number);g.visible=state.gameMode!=='standard'||explored.has(k)||['campus','enemy-base','rival-base'].includes(terrain(x,z));}for(const u of state.units)if(u.team===viewer||visible.has(tileKey(u.x,u.z)))unitMeshes.set(u.id,createUnit(u,dynamic));for(const s of state.structures)if(state.gameMode!=='standard'||explored.has(tileKey(s.x,s.z)))structure(s,dynamic,s.ready>state.turn);for(const b of plan.builds)structure(b,preview,true);for(const b of state.pendingRecruits??[])structure({...b,type:b.kind},preview,true);
     for(const [id,o] of Object.entries(plan.orders)){const u=state.units.find(u=>u.id===id);if(!u)continue;if(o.type!=='move')marker(preview,u.x,u.z,o.type==='attack'?'#e09569':'#8cbccc');if(o.type==='move'){marker(preview,o.x,o.z,'#e9b84e');const line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(coord(u.x),.16,coord(u.z)),new T.Vector3(coord(o.x),.16,coord(o.z))]),new T.LineBasicMaterial({color:'#bd8c2d'}));line.userData.ownMaterial=true;preview.add(line);}}
     const u=state.units.find(u=>u.id===selected);if(u){marker(preview,u.x,u.z,'#fff4ba');if(mode==='move'){
  for(const {x,z} of reachable(state,u,plan))marker(preview,x,z,'#59b98b');
@@ -80,11 +80,37 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
  }
 }}
     for(const d of DEPOSITS){if(state.gameMode==='standard'&&!explored.has(tileKey(d.x,d.z)))continue;const developed=state.developed[`${d.x},${d.z}`];box(dynamic,.45,developed?.25:.08,.45,developed?'#73a5ac':'#bd9f61',coord(d.x),developed?.13:.04,coord(d.z));}
-    for(const g of GATES)marker(preview,g.x,g.z,'#eac76c');
+    for(const g of state.ruleset==='sequential'?(state.playerTeam==='enemy'?[{x:17,z:14},{x:19,z:17},{x:17,z:19},{x:14,z:17}]:state.playerTeam==='rival'?[{x:17,z:1},{x:19,z:3},{x:17,z:6},{x:14,z:3}]:GATES):GATES)marker(preview,g.x,g.z,'#eac76c');
+ if(state.ruleset==='sequential'){
+  for(const p of state.bonusResources??[]){
+   if(p.claimed||!explored.has(tileKey(p.x,p.z)))continue;
+   const bonus=new T.Group();bonus.position.set(coord(p.x),0,coord(p.z));
+   const gem=new T.Mesh(new T.OctahedronGeometry(.21,0),new T.MeshStandardMaterial({color:p.amount>=5?'#e5ae44':'#7ac6b3',metalness:.3,roughness:.5}));
+   gem.position.y=.3;bonus.add(gem);dynamic.add(bonus);
+  }
+  for(const [k,owner] of Object.entries(state.points)){
+   if(!owner||!explored.has(k))continue;
+   const level=state.cityLevels?.[k]??1,[x,z]=k.split(',').map(Number);
+   const g=new T.Group();g.position.set(coord(x),.04,coord(z));
+   const roofColor=owner==='ally'?'#26795c':owner==='enemy'?'#a85260':'#4777aa';
+   for(let i=0;i<level;i++){
+    const xOffset=(i-(level-1)/2)*.27;
+    const hall=new T.Mesh(new T.BoxGeometry(.25,.2+.10*i,.31),new T.MeshStandardMaterial({color:'#e9e3cf'}));
+    hall.position.set(xOffset,.14+.05*i,-.03);g.add(hall);
+    const roof=new T.Mesh(new T.ConeGeometry(.21,.15,4),new T.MeshStandardMaterial({color:roofColor}));
+    roof.rotation.y=Math.PI/4;roof.position.set(xOffset,.31+.1*i,-.03);g.add(roof);
+   }
+   dynamic.add(g);
+  }
+  for(const id of state.acted??[]){
+   const u=state.units.find(v=>v.id===id);
+   if(u?.team===viewer)marker(preview,u.x,u.z,'#b1b6ab',.07);
+  }
+ }
     for(const k of state.roads??[]){const [x,z]=k.split(',').map(Number);const m=new T.Mesh(new T.BoxGeometry(.83,.04,.26),mat('#cbb78c'));m.position.set(coord(x),.09,coord(z));dynamic.add(m);}
     if(state.grandConstruction||state.grandCompleted)flag(dynamic,coord(3)-.9,.3,coord(3)-.9,state.grandCompleted?'#e2b046':'#94a2ac');
     for(const [k,currentOwner] of Object.entries(state.points)){
-      const owner=state.gameMode==='standard'&&!visible.has(k)?state.lastKnownPoints?.ally?.[k]:currentOwner;
+      const owner=state.gameMode==='standard'&&!visible.has(k)?state.lastKnownPoints?.[viewer]?.[k]:currentOwner;
       if(!owner||(state.gameMode==='standard'&&!explored.has(k)))continue;const [x,z]=k.split(',').map(Number);flag(dynamic,coord(x)+.25,.3,coord(z),owner==='ally'?'#2b8f63':owner==='rival'?'#4d75ad':'#bb6048');}
     if(state.gameMode==='standard'){
      const baseKnown=(x,z)=>{for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)if(explored.has(tileKey(x+dx,z+dz)))return true;return false;};
