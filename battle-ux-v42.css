@@ -1,0 +1,10 @@
+/* OLYMPUS v4.2 tactical HUD */
+.seq-battle-badge{margin-top:5px;padding:6px 12px;border:1px solid #bccdb9;border-radius:7px;background:#e8efe4;color:#315748;font-size:12px}
+#seqUnitCard,#seqBattleSheet{position:absolute;top:85px;right:20px;width:min(290px,calc(100vw - 40px));max-height:60vh;overflow:auto;padding:14px;border:1px solid #d4d5c8;border-radius:11px;background:rgba(252,250,243,.97);box-shadow:0 6px 24px #1b33252c;color:#2c4441}
+#seqUnitCard[hidden],#seqBattleSheet[hidden],.seq-playback[hidden],#seqUnitCard.seq-covered{display:none!important}
+#seqUnitCard strong{display:block;font-size:15px}#seqUnitCard p,.seq-battle-score p{font-size:12px;margin:7px 0}#seqUnitCard small,.seq-battle-score small{font-size:11px;color:#697a6c}
+.seq-target-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.seq-target-preview{padding:7px 9px;background:#f1f1e8;border:1px solid #d7dccc;border-radius:6px;font-size:11px}
+.seq-battle-heading{display:flex;justify-content:space-between;align-items:center}.seq-battle-close{padding:6px 10px;border-radius:7px;border:1px solid #cbd6c6;background:#e8eee5;color:#315748}
+.seq-battle-score{background:#eff1e9;padding:10px;margin:12px 0;border-radius:8px}#seqBattleSheet h4{font-size:12px}.seq-battle-entries{max-height:240px;overflow:auto;padding-left:20px}.seq-battle-entries li{font-size:11px;line-height:1.5;padding:4px 0;border-bottom:1px solid #e7e6da}
+.seq-playback{position:absolute;top:85px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:8px;background:#faf8ef;border:1px solid #cbd5c5;border-radius:10px;color:#315446;max-width:calc(100vw - 15px)}.seq-playback-phase{font-size:12px}.seq-playback button{padding:6px 8px;border-radius:7px;border:1px solid #c0cdbd;background:#e8eee5;color:#35544b;font-size:11px}
+@media(max-width:760px){#seqUnitCard,#seqBattleSheet{top:auto;bottom:94px;left:7px;right:7px;width:auto;max-height:40vh;padding:10px}.seq-battle-badge{font-size:10px}.seq-playback{top:150px;gap:4px}.seq-playback-phase,.seq-playback button{font-size:10px}#seqUI:has(#seqUnitCard:not([hidden])) #seqGuide{display:none}}
