@@ -6,8 +6,8 @@ import {DEFAULT_PITCH,MIN_PITCH,MAX_PITCH,DEFAULT_ANGLE,ANGLE_FREEDOM,clampPitch
 import {isUniversity,CAMPUS_COLORS,streetPlan,apartmentPlan,addUrbanCell,CITY_ASPHALT} from './urban-city.js';
 import {makeCampus} from './campus.js';
 
-assert.equal(DEFAULT_PITCH,70);
-assert.deepEqual([MIN_PITCH,MAX_PITCH],[70,70]);
+assert.equal(DEFAULT_PITCH,58);
+assert.deepEqual([MIN_PITCH,MAX_PITCH],[35,75]);
 assert.equal(clampPitch(-100),MIN_PITCH);
 assert.equal(clampPitch(200),MAX_PITCH);
 assert.ok(Math.abs(clampAngle(-100)-(DEFAULT_ANGLE-ANGLE_FREEDOM))<1e-10);

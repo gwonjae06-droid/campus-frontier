@@ -4,18 +4,18 @@ import {CAMERA_MODE,DEFAULT_PITCH,MIN_PITCH,MAX_PITCH,DEFAULT_ANGLE,ANGLE_FREEDO
 import {swipePan,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js';
 const near=(a,b)=>Math.abs(a-b)<1e-8;
 
-assert.equal(CAMERA_MODE,'strategy-fixed');
-assert.equal(DEFAULT_PITCH,70);
-assert.equal(MIN_PITCH,MAX_PITCH);
-assert.equal(MIN_PITCH,DEFAULT_PITCH);
+assert.equal(CAMERA_MODE,'strategy-tilt');
+assert.equal(DEFAULT_PITCH,58);
+assert.ok(MIN_PITCH<DEFAULT_PITCH&&DEFAULT_PITCH<MAX_PITCH);
+assert.equal(MIN_PITCH,35);
 assert.equal(ANGLE_FREEDOM,0);
 for(const pitch of [-120,0,45,70,100,NaN]){
- assert.equal(clampPitch(pitch),DEFAULT_PITCH);
+ assert.equal(clampPitch(pitch),Number.isFinite(pitch)?Math.max(35,Math.min(75,pitch)):DEFAULT_PITCH);
 }
 for(const angle of [-100,0,Math.PI/3,100,NaN])assert.equal(clampAngle(angle),DEFAULT_ANGLE);
 const ref=orbitPosition(DEFAULT_ANGLE,DEFAULT_PITCH);
-assert.deepEqual(orbitPosition(0,13),ref,'pitch or angle inputs must never rotate strategy camera');
-assert.deepEqual(orbitPosition(2,84),ref);
+assert.notDeepEqual(orbitPosition(0,13),ref);
+assert.notDeepEqual(orbitPosition(2,84),ref);
 const start={x:0,z:0},bounds={min:-11.2,max:11.2};
 const pitch=DEFAULT_PITCH,yaw=DEFAULT_ANGLE,scale=.027;
 const right=swipePan(start,120,0,yaw,pitch,scale,bounds);
@@ -47,12 +47,12 @@ assert.ok(board.includes('swipePan(gesture.startTarget,m.x-gesture.x,m.y-gesture
 assert.ok(board.includes('if(Math.hypot(dx,dy)>7)down.moved=true'),'tap vs swipe threshold');
 assert.ok(board.includes("if(!moved){const hit=pick(e);if(hit)onPick(hit);}"),'taps still select targets');
 assert.ok(board.includes('zoom=pinchZoom(gesture.startZoom,gesture.distance,m.distance)'),'pinch zoom must persist');
-assert.ok(!board.includes('function setPitch(')&&!board.includes('function rotate('));
+assert.ok(board.includes('function setPitch(')&&!board.includes('function rotate('));
 assert.ok(!board.includes('angle=clampAngle(down.a'));
-for(const id of ['pitch','pitchLow','pitchHigh','rotateLeft','rotateRight','pitchValue'])assert.ok(!html.includes(`id="${id}"`),id+' control must be gone');
+for(const id of ['pitchLow','pitchHigh','rotateLeft','rotateRight'])assert.ok(!html.includes(`id="${id}"`),id+' control must be gone');
 for(const id of ['zoomIn','zoomOut','zoomRange','zoomValue','resetView'])assert.ok(html.includes(`id="${id}"`));
 assert.ok(game.includes("$('#resetView').onclick")&&game.includes("$('#zoomRange').oninput"));
-assert.ok(!game.includes("$('#pitch')")&&!game.includes("$('#rotateLeft')"));
+assert.ok(game.includes("$('#pitch')")&&!game.includes("$('#rotateLeft')"));
 assert.ok(html.includes('fixed-isometric-v17.css?v=1'));
 assert.ok(css.includes('zoom-control'));
-console.log('PASS: fixed strategy isometric camera, one swipe = one direct map pan, preserved tap/pinch/zoom, clean controls');
+console.log('PASS: adjustable strategy camera, one swipe = one direct map pan, preserved tap/pinch/zoom, clean controls');

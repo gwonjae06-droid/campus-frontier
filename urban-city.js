@@ -47,14 +47,14 @@ export function addUrbanCell(T,cell,x,z,type,wx,wz,box,mat){
  if(building){
    // Apartment blocks are decorative, do not alter game movement/passability.
    // Place them off-center so a unit always remains visible/clickable.
-   const px=wx+building.xOffset,pz=wz+building.zOffset,h=building.floors*.105;
+   const px=wx+building.xOffset*1.3,pz=wz+building.zOffset*1.3,h=building.floors*.052;
    const walls=['#dce4e7','#f0e7d5','#b7ced2'][building.tone];
    box(cell,building.width+.16,.035,building.depth+.16,'#75878a',px,.03,pz);
    box(cell,building.width,h,building.depth,walls,px,.055+h/2,pz);
    box(cell,building.width+.035,.055,building.depth+.035,'#485d68',px,.08+h,pz);
    for(const level of [2,4,6,8,10]){
      if(level>building.floors)continue;
-     const y=.06+level*.105;
+     const y=.06+level*.052;
      box(cell,building.width*.65,.035,.012,'#47788f',px,y,pz+building.depth/2+.008);
      box(cell,.012,.035,building.depth*.60,'#47788f',px+building.width/2+.008,y,pz);
    }

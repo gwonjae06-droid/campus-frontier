@@ -1,11 +1,10 @@
-// Fixed near-overhead orthographic view. At 70°, ground depth retains 94% of its shape
-// (versus 83% at 56°), without independently stretching either ground axis.
-export const CAMERA_MODE='strategy-fixed';
-export const DEFAULT_PITCH=70, MIN_PITCH=DEFAULT_PITCH, MAX_PITCH=DEFAULT_PITCH;
+// Adjustable orthographic pitch. Perspective foreshortening is natural; never scale world X/Z separately.
+export const CAMERA_MODE='strategy-tilt';
+export const DEFAULT_PITCH=58, MIN_PITCH=35, MAX_PITCH=75;
 export const DEFAULT_ANGLE=Math.PI/4, ANGLE_FREEDOM=0;
 export const clampPitch=value=>Math.max(MIN_PITCH,Math.min(MAX_PITCH,Number.isFinite(value)?value:DEFAULT_PITCH));
 export const clampAngle=value=>Math.max(DEFAULT_ANGLE-ANGLE_FREEDOM,Math.min(DEFAULT_ANGLE+ANGLE_FREEDOM,Number.isFinite(value)?value:DEFAULT_ANGLE));
-// The strategic map never changes orientation or tilt while panning or zooming.
+// Panning preserves orientation and the chosen tilt.
 export function orbitPosition(angle,pitch,target={x:0,y:0,z:0}){
  const radians=clampPitch(pitch)*Math.PI/180,r=38,horizontal=r*Math.cos(radians);
  const yaw=clampAngle(angle);

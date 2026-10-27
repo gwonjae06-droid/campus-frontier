@@ -43,7 +43,7 @@ assert.ok(html.includes('data-research-path="defense"'));
 assert.ok(html.includes('data-research-path="science"'));
 assert.ok(html.includes('id="advancedTech"'));
 assert.ok(html.includes('simple-game-v13.css?v=1'));
-assert.ok(html.includes('game.js?v=geometry-v21'));
+assert.ok(html.includes('game.js?v=olympus-v22'));
 const license=readFileSync('data/THIRD-PARTY-GEO-DATA.md','utf8');
 assert.ok(license.includes('Open Database License'));
 console.log('PASS: one-tap contextual battles, mobile quick recruit, auto-research and auto-capture');

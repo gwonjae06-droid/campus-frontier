@@ -3,9 +3,9 @@ import {campusTransform,CAMPUS_MODEL_WIDTH,visibleBuildingHeight} from './campus
 
 export function makeCampus(data,school='skku') {
   const themes={
-    skku:{ground:'#26764f',highlight:'#459e68',wall:'#d4e5c8',roof:'#226446',forest:'#185738'},
-    yonsei:{ground:'#245989',highlight:'#3884b2',wall:'#dbe4ee',roof:'#275788',forest:'#1a5982'},
-    korea:{ground:'#862f46',highlight:'#b64e60',wall:'#e8d8d6',roof:'#8a3047',forest:'#783347'}
+    skku:{ground:'#b8c9a0',highlight:'#d4daba',wall:'#eee9d7',roof:'#547b68',forest:'#47745b'},
+    yonsei:{ground:'#b4c7c4',highlight:'#ceddd4',wall:'#ece8dc',roof:'#4e728b',forest:'#537c70'},
+    korea:{ground:'#d0c1ac',highlight:'#ded2b6',wall:'#f0e5d3',roof:'#8e5e58',forest:'#647b60'}
   };
   const theme=themes[school]??themes.skku;
   const group=new T.Group(),picks=[];
@@ -24,11 +24,11 @@ export function makeCampus(data,school='skku') {
   const shapeFor=ring=>new T.Shape(ring.map(([x,z])=>{const p=local(x,z);return new T.Vector2(p[0],-p[1]);}));
   for(const [index,b] of data.buildings.entries()){
     const shape=shapeFor(b.o);for(const hole of b.ho??[])shape.holes.push(new T.Path(hole.map(([x,z])=>{const p=local(x,z);return new T.Vector2(p[0],-p[1]);})));
-    const h=visibleBuildingHeight(b.h);const center=b.o.reduce((acc,point)=>[acc[0]+point[0],acc[1]+point[1]],[0,0]).map(v=>v/b.o.length);const loc=local(...center),y=ground(b.g,loc[0],loc[1]);const geometry=new T.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});geometry.rotateX(-Math.PI/2);
+    const bx=b.o.map(p=>p[0]),bz=b.o.map(p=>p[1]);const h=visibleBuildingHeight(b.h,(Math.max(...bx)-Math.min(...bx))*scale,(Math.max(...bz)-Math.min(...bz))*scale);const center=b.o.reduce((acc,point)=>[acc[0]+point[0],acc[1]+point[1]],[0,0]).map(v=>v/b.o.length);const loc=local(...center),y=ground(b.g,loc[0],loc[1]);const geometry=new T.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});geometry.rotateX(-Math.PI/2);
     const hanok=/명륜당|대성전|동재|서재|동무|서무|비천당|문$|각$|정록청|존경각|향관청|제기고/.test(b.n??'');
-    const wallTone=new T.Color(hanok?'#d8c8aa':b.fc??'#e5dfc8').lerp(new T.Color(theme.wall),.62);
+    const wallTone=new T.Color(hanok?'#d8c8aa':b.fc??'#e5dfc8').lerp(new T.Color(theme.wall),.35);
     const body=new T.Mesh(geometry,material(wallTone.getStyle()));body.position.y=y;body.castShadow=true;body.receiveShadow=true;body.userData.building={...b,index};group.add(body);picks.push(body);
-    const roofGeo=new T.ShapeGeometry(shape);roofGeo.rotateX(-Math.PI/2);const roofTone=new T.Color(hanok?'#466769':b.rc??'#9ea99c').lerp(new T.Color(theme.roof),.75);
+    const roofGeo=new T.ShapeGeometry(shape);roofGeo.rotateX(-Math.PI/2);const roofTone=new T.Color(hanok?'#466769':b.rc??'#9ea99c').lerp(new T.Color(theme.roof),.32);
     const roof=new T.Mesh(roofGeo,material(roofTone.getStyle()));roof.position.y=y+h+.001;roof.userData.building=body.userData.building;group.add(roof);picks.push(roof);
     if(!data.meta?.simplifiedTerrain){const edges=new T.LineSegments(new T.EdgesGeometry(geometry,35),new T.LineBasicMaterial({color:'#788375',transparent:true,opacity:.35}));edges.position.y=y;group.add(edges);}
     if(hanok){const xs=b.o.map(p=>p[0]),zs=b.o.map(p=>p[1]),w=(Math.max(...xs)-Math.min(...xs))*scale,d=(Math.max(...zs)-Math.min(...zs))*scale;const mid=local((Math.min(...xs)+Math.max(...xs))/2,(Math.min(...zs)+Math.max(...zs))/2);if(w>.025&&d>.025){const ridge=new T.Mesh(new T.BoxGeometry(w,.009,.012),material('#365154'));ridge.position.set(mid[0],y+h+.012,mid[1]);group.add(ridge);}}

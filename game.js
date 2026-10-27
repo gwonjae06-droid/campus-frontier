@@ -1,6 +1,6 @@
 import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=10';
 import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints,GATES,targets} from './simulation.js?v=18';
-import {createBoard} from './board.js?v=21';
+import {createBoard} from './board.js?v=22';
 import {visibleTiles,exploredTiles,tileKey,rememberExploration} from './vision.js?v=18';
 import {isCeasefire,canProposeCeasefire,aiAcceptsCeasefire,ceasefireUntil} from './diplomacy.js?v=10';
 const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v13';
@@ -56,7 +56,7 @@ function refresh(){
  refreshGrowth();refreshDiplomacy();
  if(board&&!busy)board.sync(state,plan,selected,mode);
 }
-function setFocus(value){focused=value;board?.setFocus(value);$('#overview').hidden=!value;$('#mapMode').textContent=value?'성균관대학교 인문사회과학캠퍼스 · 4×4 본진':'전략 지도';$('#focusCampus').textContent=value?'전체 전장 ↙':'캠퍼스 확대 ↗';if(value){mode='inspect';document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));toast('건물을 누르면 이름이 표시됩니다.');}refresh();}
+function setFocus(value,school='skku'){focused=value;board?.setFocus(value,school);$('#overview').hidden=!value;$('#mapMode').textContent=value?`${school==='skku'?'성균관대':school==='korea'?'고려대':'연세대'} · 캠퍼스 확대`:'전략 지도';$('#focusCampus').textContent=value?'전체 전장 ↙':'캠퍼스 확대 ↗';if(value){mode='inspect';document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));toast('건물을 누르면 이름이 표시됩니다.');}refresh();}
 function simpleRecruit(type='recruit'){
  if(busy||state.result)return;
  const position=GATES.find(g=>!canBuild(state,plan,type,g.x,g.z));
@@ -110,16 +110,17 @@ async function execute(){if(busy||state.result)return;busy=true;selected=null;re
  }catch(error){toast(`명령을 실행하지 못했습니다: ${error.message}`);}finally{busy=false;$('#phase').textContent=state.result?'연습 종료':'명령 예약';refresh();}}
  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{setMode(b.dataset.mode);toast(mode==='move'?'아군을 선택한 뒤 이동할 타일을 누르세요.':mode==='inspect'?'건물·부대·타일을 눌러 정보를 확인하세요.':mode==='road'?'도로망 연구 후 자기 영토의 통행 가능한 타일을 누르세요.':`${names[mode]} · 캠퍼스 영토에 예약하세요. 모집은 금빛 출전 타일입니다.`);});
  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>reserveAction(b.dataset.action));
- $('#resolve').onclick=execute;$('#clearPlan').onclick=()=>{plan=emptyPlan();save();refresh();toast('모든 예약을 취소하고 자원을 돌려놓았습니다.');};$('#focusCampus').onclick=()=>setFocus(!focused);$('#overview').onclick=()=>setFocus(false);
+ $('#resolve').onclick=execute;$('#clearPlan').onclick=()=>{plan=emptyPlan();save();refresh();toast('모든 예약을 취소하고 자원을 돌려놓았습니다.');};$('#focusCampus').onclick=()=>setFocus(!focused);document.querySelectorAll('[data-campus-focus]').forEach(b=>b.onclick=()=>setFocus(true,b.dataset.campusFocus));$('#overview').onclick=()=>setFocus(false);
  $('#panelToggle').onclick=()=>toggleHudPanel('panel-open',$('#panelToggle'),!document.body.classList.contains('panel-open'));
 
  $('#creditsOpen').onclick=()=>$('#creditsDialog').showModal();
  $('#game').addEventListener('pointerdown',()=>{if(compactScreen.matches&&document.body.classList.contains('panel-open'))toggleHudPanel('panel-open',$('#panelToggle'),false);});
  compactScreen.addEventListener('change',()=>toggleHudPanel('panel-open',$('#panelToggle'),!compactScreen.matches));
  
+  $('#pitch').oninput=e=>board?.setPitch(Number(e.target.value));
   $('#zoomRange').oninput=e=>board?.setZoom(Number(e.target.value));
   $('#zoomIn').onclick=()=>board?.zoomBy(.65);$('#zoomOut').onclick=()=>board?.zoomBy(-.65);
- $('#resetView').onclick=()=>{setFocus(false);board?.resetView();toast('지도를 중앙으로 옮겼습니다. 한 손가락으로 지도를 밀어 이동하세요.');};
+ $('#resetView').onclick=()=>{setFocus(false);board?.resetView();toast('기본 시점으로 복귀했습니다. 지도는 드래그, 높이는 시점 슬라이더로 조절하세요.');};
  const showResearch=()=>{$('#growthDialog').showModal();refreshGrowth();requestAnimationFrame(renderTreeConnections);};$('#growth').onclick=showResearch;$('#openResearch').onclick=showResearch;$('#advancedTech').addEventListener('toggle',()=>{if($('#advancedTech').open)requestAnimationFrame(renderTreeConnections);});
  $('#diplomacy').onclick=()=>{$('#diplomacyDialog').showModal();refreshDiplomacy();};
  document.querySelectorAll('[data-truce]').forEach(b=>b.onclick=()=>{const target=b.dataset.truce,error=canProposeCeasefire(state,'ally',target);if(error){toast(error);return;}plan.diplomacy={target};save();refresh();toast(`${target==='enemy'?'고려대':'연세대'}에 5턴 휴전 제안을 예약했습니다.`);});
@@ -141,7 +142,7 @@ $('#mobileReset').onclick=()=>{$('#dialog').close();$('#resetDialog').showModal(
  const rivalData={};
  if(yonseiResponse.ok)rivalData.yonsei=await yonseiResponse.json();
  if(koreaResponse.ok)rivalData.korea=await koreaResponse.json();
- board=createBoard($('#game'),data,pick,null,(_pitch,zoom)=>{$('#zoomRange').value=zoom;$('#zoomValue').textContent=`${zoom.toFixed(1)}×`;},rivalData);$('#buildingCount').textContent=board.campusCount;$('#loading').remove();refresh();try{if(!localStorage.getItem(SAVE)&&localStorage.getItem('campus-frontier-turn-v12'))toast('규칙 변경으로 새 연습을 시작합니다. 이전 저장은 별도로 보존됩니다.');}catch{}if(!storageAvailable)toast('브라우저 저장을 사용할 수 없습니다. 이번 플레이는 새로고침 시 초기화됩니다.');}catch(error){console.error('대학전선 초기화 오류',error);const loading=$('#loading');if(loading)loading.textContent=`실행 오류: ${error.message}`;else toast(`화면 오류: ${error.message} · 새로고침해 주세요.`);}
+ board=createBoard($('#game'),data,pick,null,(_pitch,zoom)=>{$('#pitch').value=Math.round(_pitch);$('#pitchValue').textContent=`${Math.round(_pitch)}°`;$('#zoomRange').value=zoom;$('#zoomValue').textContent=`${zoom.toFixed(1)}×`;},rivalData);$('#buildingCount').textContent=board.campusCount;$('#loading').remove();refresh();try{if(!localStorage.getItem(SAVE)&&localStorage.getItem('campus-frontier-turn-v12'))toast('규칙 변경으로 새 연습을 시작합니다. 이전 저장은 별도로 보존됩니다.');}catch{}if(!storageAvailable)toast('브라우저 저장을 사용할 수 없습니다. 이번 플레이는 새로고침 시 초기화됩니다.');}catch(error){console.error('대학전선 초기화 오류',error);const loading=$('#loading');if(loading)loading.textContent=`실행 오류: ${error.message}`;else toast(`화면 오류: ${error.message} · 새로고침해 주세요.`);throw error;}
 
 
 function refreshDiplomacy(){

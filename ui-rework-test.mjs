@@ -13,7 +13,7 @@ assert.ok(!html.includes('작전 목표')&&!html.includes('선택 정보'));
 assert.ok(html.includes('각 대학은 자신의 캠퍼스에서 유대를 다진다.'));
 assert.ok(html.includes('다른 대학의 지배만은 결코 용납할 수 없다.'));
 assert.ok(!html.includes('id="viewToggle"'));
-assert.ok(!html.includes('id="pitch"')&&html.includes('id="zoomRange"'));
+assert.ok(html.includes('id="pitch"')&&html.includes('id="zoomRange"'));
 assert.ok(style.includes('body:not(.camera-open) .view-panel{display:grid!important}'));
 assert.ok(game.includes('function selection(title,body){toast('));
 
