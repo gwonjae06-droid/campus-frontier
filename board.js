@@ -3,6 +3,7 @@ import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
 import {SIZE,terrain,isCampus,key,stats,reachable,targets,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
 import {makeCampus} from './campus.js?v=14';
+import {CAMPUS_PLOT_WIDTH} from './campus-scale.js?v=14';
 import {makeRivalCampus} from './rival-campuses.js?v=12';
 import {visibleTiles,exploredTiles,tileKey} from './vision.js?v=10';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
@@ -27,14 +28,26 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
     if(type==='resource'){const central=x===10&&z===10;box(cell,central?.94:.58,.2,central?.94:.58,central?'#e9c46e':'#e6d39c',coord(x),.1,coord(z));cone(cell,central?.33:.21,central?.68:.42,central?'#bd8438':'#be9850',coord(x),central?.55:.4,coord(z),central?6:4);}
   }
   const campus=makeCampus(data);campus.group.position.set(coord(3.5),0,coord(3.5));world.add(campus.group);
-  const outline=new T.LineLoop(new T.BufferGeometry().setFromPoints([new T.Vector3(-2.18,.07,-2.18),new T.Vector3(2.18,.07,-2.18),new T.Vector3(2.18,.07,2.18),new T.Vector3(-2.18,.07,2.18)]),new T.LineBasicMaterial({color:'#e4be65'}));campus.group.add(outline);
+  // These are *plot* boundaries, not bases: all three plots are exactly
+  // 4×4 tiles while every building's X/Z ratio stays uniform inside.
+  function campusBorder(gridX,gridZ,color){
+    const cx=coord(gridX),cz=coord(gridZ),half=CAMPUS_PLOT_WIDTH/2-.065;
+    const corners=[[-half,-half],[half,-half],[half,half],[-half,half]]
+      .map(([x,z])=>new T.Vector3(cx+x,.043,cz+z));
+    const outline=new T.LineLoop(new T.BufferGeometry().setFromPoints(corners),
+      new T.LineBasicMaterial({color,linewidth:2,depthTest:true}));
+    world.add(outline);return outline;
+  }
+  campusBorder(3.5,3.5,'#e4be65');
   flag(world,coord(4)+.42,.25,coord(4)+.42,'#24855f');
   const korea=rivalData.korea?.buildings?.length?makeCampus(rivalData.korea):makeRivalCampus('korea'),yonsei=rivalData.yonsei?.buildings?.length?makeCampus(rivalData.yonsei):makeRivalCampus('yonsei');
   const tent=korea.group,rivalCampus=yonsei.group;
   tent.position.set(coord(16.5),0,coord(16.5));rivalCampus.position.set(coord(16.5),0,coord(3.5));
   world.add(tent,rivalCampus);
+  campusBorder(16.5,16.5,'#cc826f');
+  campusBorder(16.5,3.5,'#7399d5');
   box(world,SIZE*1.14,.14,SIZE*1.14,'#d1dacb',0,-.4,0);
-  function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58,488);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(4.1,.58,1);world.add(s);return s;}
+  function label(text,x,y,z,color){const c=document.createElement('canvas');c.width=512;c.height=90;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(0,0,512,90,18);ctx.fill();ctx.fillStyle='#fff8e4';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,58,488);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,toneMapped:false}));s.position.set(x,y,z);s.scale.set(3.65,.642,1);world.add(s);return s;}
   const labels=[label('성균관대학교 인문사회과학캠퍼스',coord(3.5),1.5,coord(2),'#285e46'),label('고려대학교 안암캠퍼스',coord(16.5),1.5,coord(17),'#a9624c'),label('연세대학교 신촌캠퍼스',coord(16.5),1.5,coord(3),'#506d9d'),label('중앙 거점 · 5점',coord(10),1.65,coord(10),'#a6782a')];
   let dynamic=new T.Group(),preview=new T.Group();world.add(dynamic,preview);let unitMeshes=new Map(),currentState=null;
   function cleanup(g){g.traverse(o=>{o.geometry?.dispose();if(o.material&&!materials.has(o.material.color?.getStyle())){if(o.userData.ownMaterial)o.material.dispose();}});world.remove(g);}
