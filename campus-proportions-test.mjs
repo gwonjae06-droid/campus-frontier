@@ -11,7 +11,7 @@ assert.equal(CAMPUS_PLOT_WIDTH,TILE_WORLD_SIZE*4);
 assert.ok(CAMPUS_MODEL_WIDTH<CAMPUS_PLOT_WIDTH);
 assert.equal(DEFAULT_PITCH,56,'default higher camera pitch reduces vertical foreshortening');
 assert.ok(Math.sin(DEFAULT_PITCH*Math.PI/180)>Math.sin(46*Math.PI/180));
-assert.ok(orbitPosition(0,DEFAULT_PITCH).y>orbitPosition(0,46).y);
+assert.equal(orbitPosition(0,DEFAULT_PITCH).y,orbitPosition(0,46).y,'strategy camera must ignore tilt changes');
 assert.equal(visibleBuildingHeight(0),visibleBuildingHeight(12));
 assert.equal(visibleBuildingHeight(1000),0.82);
 assert.ok(visibleBuildingHeight(20)>visibleBuildingHeight(10));
