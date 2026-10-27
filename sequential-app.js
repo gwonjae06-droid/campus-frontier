@@ -1,12 +1,14 @@
 // The Olympus campaign uses this direct-action, sequential-turn controller.
 // v13 simultaneous campaign remains stored separately and can be restored via git.
-import {createSequentialGame,applySequentialAction,endSequentialRound,UNIVERSITY,TEAMS,BRANCHES,technologyCost,level,cityCost,cityIncome} from './sequential-mode.js?v=41';
+import {createSequentialGame,applySequentialAction,endSequentialRound,UNIVERSITY,TEAMS,BRANCHES,technologyCost,level,cityCost,cityIncome} from './sequential-mode.js?v=42';
 import {createBoard} from './board.js?v=41';
 import {emptyPlan,reachable,targets,stats,terrain,key,TURN_LIMIT} from './simulation.js?v=18';
 import {visibleTiles,exploredTiles} from './vision.js?v=18';
 import {createResearchPanel} from './research-panel.js?v=5';
+import {createBattleUX} from './battle-ux.js?v=42';
+import {visibleEvents} from './battle-report.js?v=42';
 const $=s=>document.querySelector(s),SAVE='campus-frontier-sequential-v4';
-let state=null,board=null,selected=null,city=null,busy=false,researchPanel=null;
+let state=null,board=null,selected=null,city=null,busy=false,researchPanel=null,battleUX=null;
 function previous(){
  try{const v=JSON.parse(localStorage.getItem(SAVE));return v?.version===14&&v.ruleset==='sequential'&&TEAMS.includes(v.playerTeam)?v:null;}catch{return null;}
 }
@@ -39,12 +41,15 @@ function hud(){
   message(`${label}! ${state.turn-1}라운드까지 진행했습니다. 새 게임으로 다시 도전해 보세요.`);
  }
  board?.sync(state,emptyPlan(),selected,'move');
+ battleUX?.render(state,selected);
 }
 function transact(action){
  if(busy||!state||state.result)return;
+ const previousState=state;
  const result=applySequentialAction(state,action);
  if(result.error){message(result.error);return false;}
  state=result.state;
+ battleUX?.record(result.events,previousState,state);
  if(action.type==='move')message('이동했습니다. 빈 거점은 자동으로 점령됩니다.');
  else if(action.type==='attack')message('공격했습니다. 다른 부대도 바로 행동할 수 있습니다.');
  else if(action.type==='recruit')message('새 부대가 출전했습니다. 다음 라운드부터 행동합니다.');
@@ -90,13 +95,31 @@ function research(){researchPanel?.open();}
 async function finish(){
  if(busy||state.result)return;
  busy=true;hud();
- const before=structuredClone(state),result=endSequentialRound(state);
+ const original=structuredClone(state),result=endSequentialRound(state);
  if(result.error){busy=false;message(result.error);hud();return;}
  state=result.state;selected=null;city=null;save();
- const schoolLabels=result.phases.map(p=>UNIVERSITY[p.team].label).join(' → ');
- message(`${schoolLabels}: 순서대로 행동했습니다. 이제 ${UNIVERSITY[state.playerTeam].label} 차례입니다.`);
- try{await board.animate(before,state,result.events,()=>{});}catch(error){console.warn('Turn animation fallback',error);}
- busy=false;hud();
+ battleUX?.playbackStart();
+ try{
+  for(const part of result.phases){
+   if(battleUX?.isSkipped())break;
+   battleUX?.phaseLabel(UNIVERSITY[part.team].label+' 행동 중');
+   board.sync(part.before,emptyPlan(),null,'move');
+   const observed=visibleEvents(part.events,part.before,part.state,state.playerTeam);
+   await board.animate(part.before,part.state,observed,
+    label=>battleUX?.phaseLabel(UNIVERSITY[part.team].label+' · '+label),
+    {getSpeed:()=>battleUX?.getSpeed()??1,shouldSkip:()=>battleUX?.isSkipped()??false});
+   board.sync(part.state,emptyPlan(),null,'move');
+  }
+ }catch(error){console.warn('Turn animation fallback',error);}
+ finally{
+  for(const part of result.phases)battleUX?.record(part.events,part.before,part.state);
+  battleUX?.record(result.events.filter(e=>e.type==='income'||e.type==='score'),
+    result.phases.at(-1)?.state??original,state);
+  battleUX?.playbackEnd();
+  const schoolLabels=result.phases.map(p=>UNIVERSITY[p.team].label).join(' → ');
+  message(schoolLabels+': 순서대로 행동했습니다. 이제 '+UNIVERSITY[state.playerTeam].label+' 차례입니다.');
+  busy=false;hud();
+ }
 }
 async function initialize(team){
  const [a,b,c]=await Promise.all([
@@ -139,6 +162,7 @@ async function initialize(team){
   </dialog>
   <button id="seqNew" title="새 전장 시작">새 게임</button>`;
  stage.append(panel);
+ battleUX=createBattleUX(panel,()=>state);
  researchPanel=createResearchPanel({dialog:$('#seqResearch'),getState:()=>state,onPurchase:branch=>transact({type:'research',branch}),isBusy:()=>busy});
  $('#seqRecruit').onclick=()=>transact({type:'recruit',kind:'infantry'});
  $('#seqScout').onclick=()=>transact({type:'recruit',kind:'scout'});
