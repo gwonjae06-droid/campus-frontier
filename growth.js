@@ -14,7 +14,7 @@ export const TECHS={
 };
 export const DEPOSITS=[{x:5,z:5,site:'home'},{x:8,z:7,site:'8,6'},{x:6,z:8,site:'6,9'}];
 export const PROJECTS={develop:{name:'자원 개발',cost:3},economy:{name:'경제 특화',cost:6},science:{name:'연구 특화',cost:6},military:{name:'군사 특화',cost:6},lab:{name:'연구 시설',cost:6},wide:{name:'광역 관리',cost:0},grand:{name:'종합 프로젝트',cost:15}};
-export const newResearch=()=>({active:null,bank:0,progress:{},done:[]});
+export const newResearch=()=>({active:null,bank:0,progress:{},done:[],scholarship:0,discounted:{}});
 export const hasTech=(s,team,id)=>s.research[team].done.includes(id);
 export const normalPoint=(s,k,team)=>s.points[k]===team&&(s.pointReady[k]??0)<=s.turn;
 export const researchRate=(s,team='ally')=>3+Object.keys(s.points).filter(k=>normalPoint(s,k,team)&&s.specialties[k]==='science').length*2+Object.entries(s.labs??{}).filter(([k,exists])=>exists&&(k==='home'?team==='ally':normalPoint(s,k,team))).length;
@@ -41,8 +41,14 @@ export function advanceResearch(s,before,team,choice,events){
  if((team==='ally'?s.homeHP:team==='enemy'?s.enemyHP:s.rivalHP)<=0)return;
  const r=s.research[team];r.active=choice;const amount=r.bank+researchRate(before,team);r.bank=0;
  if(!choice){r.bank=Math.min(10,amount);if(amount>10)events.push({type:'research-overflow',team,amount:amount-10});return;}
- const total=(r.progress[choice]??0)+amount,t=TECHS[choice];r.progress[choice]=Math.min(t.cost,total);
- if(total>=t.cost){r.done.push(choice);r.active=null;r.bank=Math.min(10,total-t.cost);events.push({type:'research',team,id:choice,text:`${t.name} 완료`});}
+ const total=(r.progress[choice]??0)+amount,t=TECHS[choice];
+ const cost=Math.max(3,t.cost-(r.discounted?.[choice]??0));
+ r.progress[choice]=Math.min(cost,total);
+ if(total>=cost){
+  r.done.push(choice);r.active=null;r.bank=Math.min(10,total-cost);
+  events.push({type:'research',team,id:choice,text:`${t.name} 완료`});
+  if(team==='ally'&&r.done.length%3===0){r.scholarship=Math.min(3,(r.scholarship??0)+1);events.push({type:'scholarship',team,text:'성균관대 학문의 축적 · 학문 +1'});}
+ }
 }
 export function finishProjects(s,orders,team,events){
  for(const o of orders){const item=PROJECTS[o.type],home=o.site==='home',d=DEPOSITS.find(d=>d.site===o.site);

@@ -8,14 +8,14 @@ const ids=[...html.matchAll(/\bid="([A-Za-z][A-Za-z0-9_-]*)"/g)].map(x=>x[1]);
 assert.equal(new Set(ids).size,ids.length,'duplicate DOM ids');
 const wired=[...game.matchAll(/\$\('#([A-Za-z][A-Za-z0-9_-]*)'\)/g)].map(x=>x[1]);
 for(const id of new Set(wired))assert.ok(ids.includes(id),`missing DOM element: #${id}`);
-for(const id of ['game','panelToggle','intelPanel','rpHud','scoreHud','viewToggle','viewPanel','zoomIn','zoomOut','pitch','zoomRange','resolve','orders','mobilePlan','creditsOpen']){
+for(const id of ['scholarshipResearch','game','panelToggle','intelPanel','rpHud','scoreHud','viewToggle','viewPanel','zoomIn','zoomOut','pitch','zoomRange','resolve','orders','mobilePlan','creditsOpen']){
  assert.ok(ids.includes(id),`missing vital game or overlay element: ${id}`);
 }
 for(const action of ['attack','guard','capture','heal']){
  assert.ok(html.includes(`data-action="${action}"`),`missing floating ${action} action`);
 }
 assert.ok(html.includes('overlay-ui.css?v=threeway-v09'));
-assert.ok(html.includes('game.js?v=threeway-v09'));
+assert.ok(html.includes('game.js?v=traits-v091'));
 assert.ok(game.includes('panel-open')&&game.includes('camera-open')&&game.includes('unit-selected'));
 assert.ok(css.includes('inset:0!important')&&css.includes('height:100dvh'),'canvas must fill viewport');
 assert.ok(css.includes('body:not(.panel-open) aside'));

@@ -1,7 +1,7 @@
 import {DEFAULT_PITCH,clampPitch,orbitPosition} from './camera.js?v=05';
-import {DEPOSITS} from './growth.js?v=09';
+import {DEPOSITS} from './growth.js?v=091';
 import * as T from './vendor/three.module.js';
-import {SIZE,terrain,isCampus,key,stats,reachable,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=09';
+import {SIZE,terrain,isCampus,key,stats,reachable,GATES,ENEMY_BASE,RIVAL_BASE} from './simulation.js?v=091';
 import {makeCampus} from './campus.js';
 import {MIN_ZOOM,MAX_ZOOM,clampZoom,gestureMetrics,pinchZoom,groundPan} from './touch-gestures.js?v=06';
 export const coord=n=>(n-(SIZE-1)/2)*1.12;

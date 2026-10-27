@@ -1,6 +1,6 @@
-import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=09';
-import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints} from './simulation.js?v=09';
-import {createBoard} from './board.js?v=09';
+import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=091';
+import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints} from './simulation.js?v=091';
+import {createBoard} from './board.js?v=091';
 const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v9';
 let state=initialState('standard'),plan=emptyPlan(),selected=null,mode='move',busy=false,focused=false,board,committedEnemy;
 let storageAvailable=true;
@@ -26,7 +26,7 @@ function selection(title,body){$('#selectionTitle').textContent=title;$('#select
 function setMode(next){mode=next;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));if(focused&&mode!=='inspect')setFocus(false);refresh();}
 function refresh(){
  $('#gold').textContent=availableGold(state,plan);$('#gold').title=`보유 ${state.gold} / 예약 ${state.gold-availableGold(state,plan)}`;$('#health').textContent=state.homeHP;$('#turn').textContent=`${Math.min(state.turn,TURN_LIMIT)}/${TURN_LIMIT}`;$('#scoreBoard').textContent=`점수 · 성균관대 ${victoryPoints(state,'ally')} / 고려대 ${victoryPoints(state,'enemy')} / 연세대 ${victoryPoints(state,'rival')}`;$('#rpHud').textContent=researchRate(state);$('#scoreHud').textContent=`${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')}:${victoryPoints(state,'rival')}`;document.body.classList.toggle('unit-selected',!!selected&&!busy&&!state.result);$('#enemyHP').textContent=`${state.enemyHP} / 30`;$('#enemyBar').value=state.enemyHP;$('#rivalHP').textContent=`${state.rivalHP} / 30`;$('#rivalBar').value=state.rivalHP;
- const count=Object.keys(plan.orders).length+plan.builds.length+(plan.projects??[]).length+(Object.hasOwn(plan,'research')?1:0);$('#orderCount').textContent=count;$('#mobilePlan').textContent=`예약 ${count}개`;$('#mobilePlan').disabled=busy;$('#mobileClear').disabled=busy||!count;$('#clearPlan').disabled=busy||!count;
+ const count=Object.keys(plan.orders).length+plan.builds.length+(plan.projects??[]).length+(Object.hasOwn(plan,'research')?1:0)+(plan.scholarshipTech?1:0);$('#orderCount').textContent=count;$('#mobilePlan').textContent=`예약 ${count}개`;$('#mobilePlan').disabled=busy;$('#mobileClear').disabled=busy||!count;$('#clearPlan').disabled=busy||!count;
  $('#resolve').disabled=busy||!!state.result||!board;$('#resolve').textContent=state.result?(state.victoryMode==='score'?({victory:'점수 승리',defeat:'점수 패배',draw:'점수 무승부'})[state.result]:({victory:'전초기지 점령 · 승리',defeat:'본진 함락',draw:'양쪽 본진 함락'})[state.result]):busy?'양쪽 명령 실행 중…':`턴 ${state.turn} 실행 →`;
  $('#turnHint').textContent=state.result?'새 연습을 시작해 다른 전략을 시도하세요.':`예약 ${state.gold-availableGold(state,plan)} OP · 명령 ${count}개 · 점수 ${victoryPoints(state,'ally')}:${victoryPoints(state,'enemy')}:${victoryPoints(state,'rival')} · 수입 +${income(state)} OP/턴`;
  document.querySelectorAll('[data-mode]').forEach(b=>b.disabled=busy||!!state.result);$('#reset').disabled=busy;
@@ -35,7 +35,8 @@ function refresh(){
  for(const [id,o] of Object.entries(plan.orders)){const u=state.units.find(u=>u.id===id);if(u)add(`${unitName(u)} · ${o.type==='move'?`${o.x+1}, ${o.z+1} 이동`:actionNames[o.type]}`,()=>delete plan.orders[id]);}
  plan.builds.forEach((b,i)=>add(`${names[b.type]} · ${b.x+1}, ${b.z+1} / ${PRICE[b.type]}`,()=>plan.builds.splice(i,1)));
  for(const [i,o] of (plan.projects??[]).entries())add(`${siteName(o.site)} · ${PROJECTS[o.type].name} / ${PROJECTS[o.type].cost} OP`,()=>plan.projects.splice(i,1));
- if(Object.hasOwn(plan,'research'))add(`연구 · ${plan.research?TECHS[plan.research].name:'보관'}`,()=>delete plan.research);
+ if(Object.hasOwn(plan,'research'))add(`연구 · ${plan.research?TECHS[plan.research].name:'보관'}`,()=>{delete plan.research;delete plan.scholarshipTech;});
+ if(plan.scholarshipTech)add(`학문 1 사용 · ${TECHS[plan.scholarshipTech].name} -3 RP`,()=>delete plan.scholarshipTech);
  if(!count){const p=document.createElement('p');p.className='empty';p.textContent='미지정 부대는 대기합니다. 공격과 점령은 별도 명령입니다.';list.append(p);}
  const roster=$('#roster');roster.replaceChildren();for(const u of state.units.filter(u=>u.team==='ally')){const b=document.createElement('button');b.textContent=`${stats(u).name} ${u.id.slice(1)} · ${u.hp}/${stats(u).hp}`;b.classList.toggle('active',u.id===selected);b.disabled=busy;b.onclick=()=>{selected=u.id;setMode('move');selection(unitName(u),`이동력 ${stats(u).move} · 공격 ${stats(u).attack} / 방어 ${stats(u).defense}. 행동 하나를 예약하세요.`);};roster.append(b);}
  $('#unitCount').textContent=`${state.units.filter(u=>u.team==='ally').length}/${unitCap(state)}${state.pendingRecruits?.length?` · 훈련 ${state.pendingRecruits.length}`:''}`;document.querySelectorAll('[data-action]').forEach(b=>b.disabled=busy||!!state.result||!selected);
@@ -89,16 +90,20 @@ $('#mobileReset').onclick=()=>{$('#dialog').close();$('#resetDialog').showModal(
 function refreshGrowth(){
  const r=state.research.ally,active=Object.hasOwn(plan,'research')?plan.research:r.active,rate=researchRate(state);
  $('#growth').textContent=active?`${TECHS[active].name} ${r.progress[active]??0}/${TECHS[active].cost} · +${rate} RP`:`연구 선택 · +${rate} RP/턴`;
- $('#researchSummary').textContent=`보관 ${r.bank}/10 RP · 이번 턴 산출 ${rate} RP · 완료 ${r.done.length}/${Object.keys(TECHS).length}`;
+ $('#researchSummary').textContent=`학문 ${r.scholarship??0}/3 · 보관 ${r.bank}/10 RP · 이번 턴 산출 ${rate} RP · 완료 ${r.done.length}/${Object.keys(TECHS).length}`;
  $('#researchWarning').textContent=!active?`연구 미선택 · 이번 턴 종료에 ${Math.max(0,r.bank+rate-10)} RP가 보관 상한을 넘어 소실됩니다.`:'선택을 바꿔도 기술별 진행도는 보존됩니다. 완성된 기술은 다음 턴부터 사용합니다.';
  const techList=$('#techList');techList.replaceChildren();
  for(const [id,t] of Object.entries(TECHS)){
   const done=hasTech(state,'ally',id),error=canResearch(state,'ally',id),button=document.createElement('button');button.className='tech-card';button.classList.toggle('active',id===active);
-  const title=document.createElement('strong');title.textContent=`${done?'✓ 완료':id===active?'▶ 선택 중':error?'🔒 잠김':'선택 가능'} · ${t.name} ${r.progress[id]??0}/${t.cost} RP`;
+  const title=document.createElement('strong');const cost=Math.max(3,t.cost-(r.discounted?.[id]??0)-(plan.scholarshipTech===id&&!r.discounted?.[id]?3:0));title.textContent=`${done?'✓ 완료':id===active?'▶ 선택 중':error?'🔒 잠김':'선택 가능'} · ${t.name} ${r.progress[id]??0}/${cost} RP`;
   const detail=document.createElement('small');detail.textContent=t.effect+(error&&!done?` · ${error}`:'');button.append(title,detail);button.disabled=busy||!!state.result||!!error;
-  button.onclick=()=>{plan.research=id;save();refresh();toast(`${t.name} 연구 선택 · 턴 종료 시 RP 투자`);};techList.append(button);
+  button.onclick=()=>{plan.research=id;if(plan.scholarshipTech&&plan.scholarshipTech!==id)delete plan.scholarshipTech;save();refresh();toast(`${t.name} 연구 선택 · 턴 종료 시 RP 투자`);};techList.append(button);
  }
- $('#bankResearch').disabled=busy||!!state.result;$('#bankResearch').onclick=()=>{plan.research=null;save();refresh();};
+ $('#bankResearch').disabled=busy||!!state.result;$('#bankResearch').onclick=()=>{plan.research=null;delete plan.scholarshipTech;save();refresh();};
+ const scholarshipButton=$('#scholarshipResearch');const canDiscount=!!active&&(r.scholarship??0)>0&&!r.discounted?.[active]&&!hasTech(state,'ally',active)&&!canResearch(state,'ally',active);
+ scholarshipButton.disabled=busy||!!state.result||(!plan.scholarshipTech&&!canDiscount);
+ scholarshipButton.textContent=plan.scholarshipTech?'학문 할인 예약 취소':`성균관대 학문 사용 · ${r.scholarship??0}개 보유 (연구 -3 RP)`;
+ scholarshipButton.onclick=()=>{if(plan.scholarshipTech)delete plan.scholarshipTech;else plan.scholarshipTech=active;save();refresh();};
  const sites=$('#siteList');sites.replaceChildren();
  for(const site of ['home',...Object.keys(state.points)]){
   const home=site==='home',card=document.createElement('section'),title=document.createElement('h3'),info=document.createElement('p');card.className='site-card';

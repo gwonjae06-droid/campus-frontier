@@ -1,4 +1,4 @@
-import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,finishLabs,finishGrand,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=09';
+import {newResearch,hasTech,growthIncome,reservedProjects,canResearch,canProject,advanceResearch,finishProjects,finishLabs,finishGrand,aiGrowth,PROJECTS,DEPOSITS} from './growth.js?v=091';
 // Deterministic public-vision practice rules. Rendering never changes outcomes.
 export const SIZE=21, TURN_LIMIT=30, CENTRAL_POINT='10,10';
 export const POINT_KEYS=['8,6','6,9','6,3','13,14','16,12','12,17',CENTRAL_POINT];
