@@ -1,8 +1,1 @@
-{
-  "name": "campus-frontier-alpha",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {"start": "node server.mjs", "test": "node --test test.mjs"},
-  "engines": {"node": ">=18"}
-}
+{"name":"campus-frontier","version":"0.2.0","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node test.mjs"},"engines":{"node":">=18"}}
