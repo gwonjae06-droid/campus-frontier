@@ -1,6 +1,6 @@
 // OLYMPUS v4.2: deterministic, fog-safe battle report projections.
 import {visibleTiles} from './vision.js?v=18';
-import {UNIVERSITY,scoreBreakdown} from './sequential-mode.js?v=42';
+import {UNIVERSITY,scoreBreakdown} from './sequential-mode.js?v=45';
 
 const tile=p=>p?p.x+','+p.z:null;
 const findUnit=(s,id)=>s.units.find(u=>u.id===id);

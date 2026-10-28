@@ -1,5 +1,5 @@
 import {stats,targets} from './simulation.js?v=18';
-import {previewAttack,UNIVERSITY} from './sequential-mode.js?v=42';
+import {previewAttack,UNIVERSITY} from './sequential-mode.js?v=45';
 
 export function readyUnits(state){
  if(!state||state.result||state.phaseTeam!==state.playerTeam)return [];

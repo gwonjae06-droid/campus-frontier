@@ -1,16 +1,17 @@
 // The Olympus campaign uses this direct-action, sequential-turn controller.
 // v13 simultaneous campaign remains stored separately and can be restored via git.
-import {createSequentialGame,applySequentialAction,endSequentialRound,UNIVERSITY,TEAMS,BRANCHES,technologyCost,level,cityCost,cityIncome} from './sequential-mode.js?v=42';
+import {createSequentialGame,applySequentialAction,endSequentialRound,UNIVERSITY,TEAMS,BRANCHES,technologyCost,level,cityCost,cityIncome} from './sequential-mode.js?v=45';
 import {createBoard} from './board.js?v=44';
 import {emptyPlan,reachable,targets,stats,terrain,key,TURN_LIMIT} from './simulation.js?v=18';
 import {visibleTiles,exploredTiles} from './vision.js?v=18';
-import {createResearchPanel} from './research-panel.js?v=5';
-import {createBattleUX} from './battle-ux.js?v=44';
-import {visibleEvents} from './battle-report.js?v=42';
-import {nextReadyUnit} from './tactical-controls.js?v=44';
-import {createTacticalPanel} from './tactical-panel.js?v=44';
+import {createResearchPanel} from './research-panel.js?v=45';
+import {createBattleUX} from './battle-ux.js?v=45';
+import {visibleEvents} from './battle-report.js?v=45';
+import {nextReadyUnit} from './tactical-controls.js?v=45';
+import {createTacticalPanel} from './tactical-panel.js?v=45';
+import {createRecruitPanel} from './recruit-panel.js?v=45';
 const $=s=>document.querySelector(s),SAVE='campus-frontier-sequential-v4';
-let state=null,board=null,selected=null,city=null,busy=false,researchPanel=null,battleUX=null,tactics=null,actionPlayback=false;
+let state=null,board=null,selected=null,city=null,busy=false,researchPanel=null,battleUX=null,tactics=null,actionPlayback=false,barracks=null;
 function previous(){
  try{const v=JSON.parse(localStorage.getItem(SAVE));return v?.version===14&&v.ruleset==='sequential'&&TEAMS.includes(v.playerTeam)?v:null;}catch{return null;}
 }
@@ -25,7 +26,7 @@ function hud(){
  $('#seqHP').textContent=`${hp} / 30`;
  $('#seqUnits').textContent=`${state.units.filter(u=>u.team===player).length}개 부대`;
  $('#seqRecruit').disabled=busy||!!state.result||bank<5;
- $('#seqScout').disabled=busy||!!state.result||bank<4;
+ $('#seqScout').disabled=busy||!!state.result;
  $('#seqEnd').disabled=busy||!!state.result;
  $('#seqEnd').textContent=busy?'행동 재생 중…':state.result?'대전 종료':'내 턴 종료';
  $('#seqCityPanel').hidden=!city||state.points[city]!==player;
@@ -161,7 +162,7 @@ async function initialize(team){
   <div id="seqCityPanel" hidden><span id="seqCityText"></span><button id="seqUpgrade">거점 발전</button></div>
   <nav id="seqControls" aria-label="전략 게임 조작">
    <button id="seqRecruit">⚔ 보병 <small>5 OP</small></button>
-   <button id="seqScout">✦ 정찰 <small>4 OP</small></button>
+   <button id="seqScout">병력 편성 <small>4개 병과</small></button>
    <button id="seqOpenTech">◈ 연구</button>
    <button id="seqGuard" hidden>▣ 휴식</button>
    <button id="seqEnd" class="main-action">내 턴 종료</button>
@@ -189,7 +190,8 @@ async function initialize(team){
  tactics=createTacticalPanel(panel,{getState:()=>state,onSelect:selectUnit,onNext:nextUnit,onEnd:finish,isBusy:()=>busy});
  researchPanel=createResearchPanel({dialog:$('#seqResearch'),getState:()=>state,onPurchase:branch=>transact({type:'research',branch}),isBusy:()=>busy});
  $('#seqRecruit').onclick=()=>transact({type:'recruit',kind:'infantry'});
- $('#seqScout').onclick=()=>transact({type:'recruit',kind:'scout'});
+ barracks=createRecruitPanel(panel,{getState:()=>state,onRecruit:kind=>transact({type:'recruit',kind}),isBusy:()=>busy});
+ $('#seqScout').onclick=()=>barracks.open();
  $('#seqOpenTech').onclick=research;
  $('#seqEnd').onclick=()=>tactics.requestEnd();
  $('#seqGuard').onclick=()=>{if(selected&&transact({type:'guard',id:selected}))selected=null;hud();};

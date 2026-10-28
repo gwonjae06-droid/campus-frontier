@@ -1,4 +1,4 @@
-import {readyUnits} from './tactical-controls.js?v=44';
+import {readyUnits} from './tactical-controls.js?v=45';
 import {stats} from './simulation.js?v=18';
 
 // A compact, keyboard-accessible roster. Only the player's own units are listed.

@@ -1,5 +1,5 @@
 // OLYMPUS research presentation: effects reflect sequential-mode.js, never placeholder bonuses.
-import {BRANCHES,UNIVERSITY,level,technologyCost} from './sequential-mode.js?v=41';
+import {BRANCHES,UNIVERSITY,level,technologyCost} from './sequential-mode.js?v=45';
 
 const SYMBOLS={
  economy:'<ellipse cx="45" cy="62" rx="27" ry="9"/><path d="M18 62v12c0 5 12 9 27 9s27-4 27-9V62"/><path d="M18 74v10c0 5 12 9 27 9s27-4 27-9V74"/><path d="M46 53c1-17 17-28 34-30-1 17-8 29-24 35"/><path d="M48 53c-2-14-13-21-24-22 1 11 8 20 21 24"/>',

@@ -8,7 +8,7 @@ function home(){battlefield.hidden=true;battlefield.inert=true;root.hidden=false
 async function enter(){
  if(loading)return;if(failed){location.reload();return;}loading=true;const button=document.getElementById('enterBattle');button.disabled=true;button.textContent='전장을 준비하는 중…';
  root.hidden=true;battlefield.hidden=false;battlefield.inert=false;document.body.classList.add('in-battle');
- try{const sequential=await import('./sequential-app.js?v=44');await sequential.enterSequential(document.getElementById('universityChoice').value);loaded=true;}
+ try{const sequential=await import('./sequential-app.js?v=45');await sequential.enterSequential(document.getElementById('universityChoice').value);loaded=true;}
  catch(error){failed=true;home();document.getElementById('resumeNote').textContent='전장을 불러오지 못했습니다. 새로고침 후 다시 시도하세요.';console.error(error);}
  finally{loading=false;button.disabled=false;button.textContent=failed?'새로고침':'순차턴 3D 전략전 입장';}
 }

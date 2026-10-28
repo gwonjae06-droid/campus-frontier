@@ -4,6 +4,7 @@
 // after the human ends their turn. The legacy resolver/save is left intact.
 import {initialState,reachable,targets,stats,passable,terrain,distance,GATES,ENEMY_GATES,RIVAL_GATES,TURN_LIMIT,key,PRICE,unitCap,STATS} from './simulation.js?v=18';
 import {rememberExploration} from './vision.js?v=42';
+import {matchupBonus,RECRUITS} from './unit-roles.js?v=45';
 export const TEAMS=['ally','enemy','rival'];
 export const UNIVERSITY={
  ally:{label:'성균관대학교',campus:'인문사회과학캠퍼스',base:{x:3,z:3},gates:GATES,bank:'gold',hp:'homeHP'},
@@ -97,13 +98,13 @@ function computeAttack(s,team,u,t){
   const victim=s.units.find(v=>v.id===t.id);if(!victim)return {error:'대상이 없습니다.'};
   const koreaFormation=victim.team==='enemy'&&s.units.some(v=>v.team==='enemy'&&v.id!==victim.id&&distance(v,victim)===1)?1:0;
   const defense=stats(victim).defense+Math.floor(level(s,victim.team,'defense')/2)+koreaFormation;
-  const damage=Math.max(1,stats(u).attack+bonus-defense);
-  return {damage,targetHp:victim.hp,remainingHp:Math.max(0,victim.hp-damage)};
+  const damage=Math.max(1,stats(u).attack+bonus+matchupBonus(u,victim)-defense);
+  return {damage,matchup:matchupBonus(u,victim),targetHp:victim.hp,remainingHp:Math.max(0,victim.hp-damage)};
  }
  if(t.kind==='base'){
   const targetHp=s[UNIVERSITY[t.team].hp];
-  const damage=Math.max(1,stats(u).attack+bonus-(level(s,t.team,'defense')>=2?1:0));
-  return {damage,targetHp,remainingHp:Math.max(0,targetHp-damage)};
+  const damage=Math.max(1,stats(u).attack+bonus+matchupBonus(u,{kind:'base'})-(level(s,t.team,'defense')>=2?1:0));
+  return {damage,matchup:matchupBonus(u,{kind:'base'}),targetHp,remainingHp:Math.max(0,targetHp-damage)};
  }
  return {error:'지원하지 않는 대상입니다.'};
 }
@@ -147,7 +148,7 @@ function action(s,team,order){
   }
  }else if(order.type==='recruit'){
   if(s.phaseTeam!==team||s.result)return {error:'모집할 수 없는 차례입니다.'};
-  const kind=order.kind??'infantry',cost={infantry:5,scout:4,cavalry:9,siege:10}[kind];
+  const kind=order.kind??'infantry',cost=RECRUITS[kind]?.cost;
   if(!cost)return {error:'알 수 없는 병과입니다.'};
   if((kind==='cavalry'&&level(s,team,'military')<2)||(kind==='siege'&&level(s,team,'military')<3))
    return {error:'군사 기술을 먼저 발전시키세요.'};
@@ -192,7 +193,8 @@ function aiPhase(s,team,events){
  const roster=s.units.filter(v=>v.team===team).map(u=>u.id);
  for(const id of roster){
   if(s.result)break;const u=s.units.find(v=>v.id===id);if(!u)continue;
-  const enemies=targets(s,u);
+  const enemies=targets(s,u).filter(t=>t.kind==='unit'||t.kind==='base');
+  enemies.sort((a,b)=>{const x=computeAttack(s,team,u,a),y=computeAttack(s,team,u,b);return Number(y.remainingHp===0)-Number(x.remainingHp===0)||y.damage-x.damage;});
   if(enemies.length){const a=action(s,team,{type:'attack',id,target:enemies[0]});if(!a.error){events.push(...a.events);continue;}}
   const points=Object.keys(s.points).filter(k=>s.points[k]!==team).map(k=>{const [x,z]=k.split(',').map(Number);return {x,z};});
   points.sort((a,b)=>distance(a,u)-distance(b,u)||a.x-b.x||a.z-b.z);
@@ -206,7 +208,7 @@ function aiPhase(s,team,events){
  if(canGrow&&rng(s)<.65){const a=action(s,team,{type:'upgrade',site:canGrow});if(!a.error)events.push(...a.events);}
  const tech=Object.keys(BRANCHES).find(b=>technologyCost(s,team,b)!==null&&bank(s,team)>=technologyCost(s,team,b)+4);
  if(tech&&rng(s)<.55){const a=action(s,team,{type:'research',branch:tech});if(!a.error)events.push(...a.events);}
- if(bank(s,team)>=5){const a=action(s,team,{type:'recruit',kind:rng(s)<.3?'scout':'infantry'});if(!a.error)events.push(...a.events);}
+ if(bank(s,team)>=5){const a=action(s,team,{type:'recruit',kind:level(s,team,'military')>=3&&!s.units.some(u=>u.team===team&&u.kind==='siege')&&bank(s,team)>=10?'siege':level(s,team,'military')>=2&&!s.units.some(u=>u.team===team&&u.kind==='cavalry')&&bank(s,team)>=9?'cavalry':rng(s)<.3?'scout':'infantry'});if(!a.error)events.push(...a.events);}
 }
 export function endSequentialRound(input){
  if(input.result)return {error:'게임이 종료되었습니다.'};

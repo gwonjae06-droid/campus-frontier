@@ -1,8 +1,8 @@
 // OLYMPUS v4.2: combat HUD, logs and cosmetic playback controls.
-import {visibleEvents,describeEvent,publicScore} from './battle-report.js?v=42';
-import {UNIVERSITY} from './sequential-mode.js?v=42';
+import {visibleEvents,describeEvent,publicScore} from './battle-report.js?v=45';
+import {UNIVERSITY} from './sequential-mode.js?v=45';
 import {stats} from './simulation.js?v=18';
-import {attackChoices} from './tactical-controls.js?v=44';
+import {attackChoices} from './tactical-controls.js?v=45';
 const STORE='campus-frontier-battle-log-v42';
 function el(tag,cls,value){
  const node=document.createElement(tag);if(cls)node.className=cls;
@@ -82,7 +82,7 @@ export function createBattleUX(root,getState,{onAttack=()=>{},isBusy=()=>false}=
    group.append(el('small','','공격 가능한 대상 · 예상 피해'));
    for(const info of list){
      const attack=el('button','seq-target-preview');attack.type='button';attack.disabled=isBusy();
-     attack.append(el('strong','',info.label),el('span','',info.damage+' 피해 → '+info.remainingHp+' HP'+(info.defeat?' · 격파 가능':'')+' · 공격'));
+     attack.append(el('strong','',info.label),el('span','',info.damage+' 피해 → '+info.remainingHp+' HP'+(info.matchup?' · 상성 +'+info.matchup:'')+(info.defeat?' · 격파 가능':'')+' · 공격'));
      attack.onclick=()=>{if(!isBusy())onAttack(u.id,info.target);};
      group.append(attack);
    }
