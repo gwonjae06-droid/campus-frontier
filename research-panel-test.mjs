@@ -74,7 +74,7 @@ for(const team of ['ally','enemy','rival']){
  assert.ok(app.includes('seqResearchTitle'));
  assert.ok(app.includes("research-panel.js?v=5"));
  assert.ok(html.includes('research-v5.css?v=5'));
- assert.ok(main.includes("sequential-app.js?v=43"));
+ assert.ok(main.includes("sequential-app.js?v=44"));
  assert.ok(css.includes('@media(max-width:440px)'));
  assert.ok(css.includes('.seq-research-benefits')&&css.includes('.seq-research-illustration'));
 }

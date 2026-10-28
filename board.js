@@ -215,8 +215,9 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
       }
       requestAnimationFrame(frame);
     });
-    onPhase('이동');
     const moves=events.filter(e=>e.type==='move');
+    if(moves.length){
+    onPhase('이동');
     await new Promise(resolve=>{
       let last=null,progress=0;
       function frame(now){
@@ -234,7 +235,10 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
       }
       requestAnimationFrame(frame);
     });
+    }
     if(skip())return;
+    const attacks=events.filter(e=>e.type==='attack');
+    if(!attacks.length)return;
     onPhase('전투');
     const flashes=new T.Group();world.add(flashes);
     function pos(ref){
@@ -253,11 +257,17 @@ export function createBoard(container,data,onPick,onDragEnd,onViewChange,rivalDa
       return new T.Vector3(coord(b.x),.6,coord(b.z));
     }
     try{
-      for(const e of events.filter(e=>e.type==='attack')){
+      for(const e of attacks){
         const a=pos(e.from),b=pos(e.target);
         if(a&&b){
           const line=new T.Line(new T.BufferGeometry().setFromPoints([a,b]),new T.LineBasicMaterial({color:'#e7ab3f'}));
           line.userData.ownMaterial=true;flashes.add(line);
+          const c=document.createElement('canvas');c.width=192;c.height=80;
+          const ctx=c.getContext('2d');ctx.fillStyle='#712b24';ctx.beginPath();ctx.roundRect(4,4,184,72,16);ctx.fill();
+          ctx.fillStyle='#fff6dc';ctx.font='bold 48px sans-serif';ctx.textAlign='center';ctx.fillText('−'+e.amount,96,57);
+          const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;
+          const sprite=new T.Sprite(new T.SpriteMaterial({map:texture,depthTest:false,depthWrite:false,toneMapped:false}));
+          sprite.position.copy(b).add(new T.Vector3(0,.65,0));sprite.scale.set(.9,.375,1);sprite.renderOrder=5;sprite.userData.ownMaterial=true;flashes.add(sprite);
         }
       }
       await wait(400);

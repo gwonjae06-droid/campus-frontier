@@ -1,14 +1,15 @@
 // OLYMPUS v4.2: combat HUD, logs and cosmetic playback controls.
 import {visibleEvents,describeEvent,publicScore} from './battle-report.js?v=42';
-import {UNIVERSITY,previewAttack} from './sequential-mode.js?v=42';
-import {stats,targets} from './simulation.js?v=18';
+import {UNIVERSITY} from './sequential-mode.js?v=42';
+import {stats} from './simulation.js?v=18';
+import {attackChoices} from './tactical-controls.js?v=44';
 const STORE='campus-frontier-battle-log-v42';
 function el(tag,cls,value){
  const node=document.createElement(tag);if(cls)node.className=cls;
  if(value!==undefined)node.textContent=value;
  return node;
 }
-export function createBattleUX(root,getState){
+export function createBattleUX(root,getState,{onAttack=()=>{},isBusy=()=>false}={}){
  const statsRoot=root.querySelector('#seqStats');
  const button=el('button','seq-battle-badge','전황 보기');
  button.type='button';button.setAttribute('aria-expanded','false');
@@ -75,15 +76,15 @@ export function createBattleUX(root,getState){
    const attack=stats(u).attack+(state.technologies?.[u.team]?.military??0);
    unit.append(el('p','','공격 '+attack+' · 기본 방어 '+stats(u).defense+' · 이동 '+stats(u).move));
    if(state.acted.includes(u.id)){unit.append(el('small','','이번 라운드 행동 완료'));return;}
-   const list=targets(state,u).filter(t=>t.kind==='unit'||t.kind==='base');
+   const list=attackChoices(state,u.id);
    if(!list.length){unit.append(el('small','','공격 가능한 적이 없습니다.'));return;}
    const group=el('div','seq-target-list');
    group.append(el('small','','공격 가능한 대상 · 예상 피해'));
-   for(const target of list){
-     const info=previewAttack(state,u.team,u.id,target);
-     if(info.error)continue;
-     const label=target.kind==='base'?UNIVERSITY[target.team].label+' 본진':stats(state.units.find(v=>v.id===target.id)).name;
-     group.append(el('div','seq-target-preview',label+' · '+info.damage+' 피해 → '+info.remainingHp+' HP'));
+   for(const info of list){
+     const attack=el('button','seq-target-preview');attack.type='button';attack.disabled=isBusy();
+     attack.append(el('strong','',info.label),el('span','',info.damage+' 피해 → '+info.remainingHp+' HP'+(info.defeat?' · 격파 가능':'')+' · 공격'));
+     attack.onclick=()=>{if(!isBusy())onAttack(u.id,info.target);};
+     group.append(attack);
    }
    unit.append(group);
  }

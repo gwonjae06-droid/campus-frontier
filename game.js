@@ -1,6 +1,6 @@
 import {TECHS,PROJECTS,researchRate,hasTech,canResearch,canProject,normalPoint,DEPOSITS} from './growth.js?v=10';
 import {initialState,emptyPlan,enemyOrders,resolveTurn,canBuild,canMove,availableGold,PRICE,terrain,isCampus,stats,canOrder,income,unitCap,TURN_LIMIT,CENTRAL_POINT,victoryPoints,GATES,targets} from './simulation.js?v=18';
-import {createBoard} from './board.js?v=43';
+import {createBoard} from './board.js?v=44';
 import {visibleTiles,exploredTiles,tileKey,rememberExploration} from './vision.js?v=18';
 import {isCeasefire,canProposeCeasefire,aiAcceptsCeasefire,ceasefireUntil} from './diplomacy.js?v=10';
 const $=selector=>document.querySelector(selector),SAVE='campus-frontier-turn-v13';

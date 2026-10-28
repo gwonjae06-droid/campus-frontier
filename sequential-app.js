@@ -1,14 +1,16 @@
 // The Olympus campaign uses this direct-action, sequential-turn controller.
 // v13 simultaneous campaign remains stored separately and can be restored via git.
 import {createSequentialGame,applySequentialAction,endSequentialRound,UNIVERSITY,TEAMS,BRANCHES,technologyCost,level,cityCost,cityIncome} from './sequential-mode.js?v=42';
-import {createBoard} from './board.js?v=43';
+import {createBoard} from './board.js?v=44';
 import {emptyPlan,reachable,targets,stats,terrain,key,TURN_LIMIT} from './simulation.js?v=18';
 import {visibleTiles,exploredTiles} from './vision.js?v=18';
 import {createResearchPanel} from './research-panel.js?v=5';
-import {createBattleUX} from './battle-ux.js?v=42';
+import {createBattleUX} from './battle-ux.js?v=44';
 import {visibleEvents} from './battle-report.js?v=42';
+import {nextReadyUnit} from './tactical-controls.js?v=44';
+import {createTacticalPanel} from './tactical-panel.js?v=44';
 const $=s=>document.querySelector(s),SAVE='campus-frontier-sequential-v4';
-let state=null,board=null,selected=null,city=null,busy=false,researchPanel=null,battleUX=null;
+let state=null,board=null,selected=null,city=null,busy=false,researchPanel=null,battleUX=null,tactics=null,actionPlayback=false;
 function previous(){
  try{const v=JSON.parse(localStorage.getItem(SAVE));return v?.version===14&&v.ruleset==='sequential'&&TEAMS.includes(v.playerTeam)?v:null;}catch{return null;}
 }
@@ -25,7 +27,7 @@ function hud(){
  $('#seqRecruit').disabled=busy||!!state.result||bank<5;
  $('#seqScout').disabled=busy||!!state.result||bank<4;
  $('#seqEnd').disabled=busy||!!state.result;
- $('#seqEnd').textContent=busy?'대학 행동 중…':state.result?'대전 종료':'내 턴 종료';
+ $('#seqEnd').textContent=busy?'행동 재생 중…':state.result?'대전 종료':'내 턴 종료';
  $('#seqCityPanel').hidden=!city||state.points[city]!==player;
  if(!$('#seqCityPanel').hidden){
   const cost=cityCost(state,city);
@@ -40,9 +42,18 @@ function hud(){
   const label=state.result==='victory'?'승리':state.result==='draw'?'무승부':'패배';
   message(`${label}! ${state.turn-1}라운드까지 진행했습니다. 새 게임으로 다시 도전해 보세요.`);
  }
- board?.sync(state,emptyPlan(),selected,'move');
+ if(!actionPlayback)board?.sync(state,emptyPlan(),selected,'move');
+ $('#seqNew').disabled=busy;$('#seqGuard').disabled=busy;$('#backHome').disabled=busy;
+ tactics?.render(state,selected);
  battleUX?.render(state,selected);
 }
+function selectUnit(id){
+ if(busy||!state||state.result)return;
+ const u=state.units.find(u=>u.id===id&&u.team===state.playerTeam);if(!u)return;
+ selected=u.id;city=null;board.focusUnit(u);hud();
+ message(state.acted.includes(id)?'이번 라운드 행동 완료 · 다음 부대로 이동하세요.':'이동할 칸이나 공격 대상 버튼을 선택하세요.');
+}
+function nextUnit(){const u=nextReadyUnit(state,selected);if(u)selectUnit(u.id);}
 function transact(action){
  if(busy||!state||state.result)return;
  const previousState=state;
@@ -57,7 +68,19 @@ function transact(action){
  else if(action.type==='research')message('기술을 연구했습니다. 효과가 즉시 적용됩니다.');
  else message('부대 행동을 완료했습니다.');
  if(action.type!=='move'&&action.type!=='attack')selected=null;
- save();hud();return true;
+ save();
+ const animated=action.type==='move'||action.type==='attack';
+ if(animated){
+  // Commit first; presentation is cosmetic and never owns game state.
+  busy=true;actionPlayback=true;selected=null;
+  board.sync(previousState,emptyPlan(),null,'move');hud();
+  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+  Promise.resolve().then(()=>board.animate(previousState,state,
+   visibleEvents(result.events,previousState,state,state.playerTeam),()=>{},
+   {getSpeed:()=>1.5,shouldSkip:reduced})).catch(error=>console.warn('Action animation fallback',error))
+   .finally(()=>{actionPlayback=false;busy=false;hud();});
+ }else hud();
+ return true;
 }
 function choose(hit){
  if(busy||!state||state.result)return;
@@ -107,7 +130,7 @@ async function finish(){
    const observed=visibleEvents(part.events,part.before,part.state,state.playerTeam);
    await board.animate(part.before,part.state,observed,
     label=>battleUX?.phaseLabel(UNIVERSITY[part.team].label+' · '+label),
-    {getSpeed:()=>battleUX?.getSpeed()??1,shouldSkip:()=>battleUX?.isSkipped()??false});
+    {getSpeed:()=>battleUX?.getSpeed()??1,shouldSkip:()=>matchMedia('(prefers-reduced-motion: reduce)').matches||(battleUX?.isSkipped()??false)});
    board.sync(part.state,emptyPlan(),null,'move');
   }
  }catch(error){console.warn('Turn animation fallback',error);}
@@ -162,22 +185,26 @@ async function initialize(team){
   </dialog>
   <button id="seqNew" title="새 전장 시작">새 게임</button>`;
  stage.append(panel);
- battleUX=createBattleUX(panel,()=>state);
+ battleUX=createBattleUX(panel,()=>state,{isBusy:()=>busy,onAttack:(id,target)=>transact({type:'attack',id,target})});
+ tactics=createTacticalPanel(panel,{getState:()=>state,onSelect:selectUnit,onNext:nextUnit,onEnd:finish,isBusy:()=>busy});
  researchPanel=createResearchPanel({dialog:$('#seqResearch'),getState:()=>state,onPurchase:branch=>transact({type:'research',branch}),isBusy:()=>busy});
  $('#seqRecruit').onclick=()=>transact({type:'recruit',kind:'infantry'});
  $('#seqScout').onclick=()=>transact({type:'recruit',kind:'scout'});
  $('#seqOpenTech').onclick=research;
- $('#seqEnd').onclick=finish;
+ $('#seqEnd').onclick=()=>tactics.requestEnd();
  $('#seqGuard').onclick=()=>{if(selected&&transact({type:'guard',id:selected}))selected=null;hud();};
  $('#seqUpgrade').onclick=()=>{if(city)transact({type:'upgrade',site:city});};
  $('#seqCloseTech').onclick=()=>researchPanel.close();
- $('#seqNew').onclick=()=>{if(confirm('현재 새 버전의 진행 내용을 초기화하시겠습니까?')){state=createSequentialGame({playerTeam:state.playerTeam,seed:Date.now()});selected=null;city=null;save();hud();message('새로운 자원 배치로 다시 시작했습니다.');}};
+ $('#seqNew').onclick=()=>{if(busy)return;if(confirm('현재 새 버전의 진행 내용을 초기화하시겠습니까?')){state=createSequentialGame({playerTeam:state.playerTeam,seed:Date.now()});selected=null;city=null;save();hud();message('새로운 자원 배치로 다시 시작했습니다.');}};
  $('#loading')?.remove();
  window.addEventListener('keydown',e=>{
   if(!document.body.classList.contains('in-battle')||!state||e.target.closest('input,textarea,select,[contenteditable="true"]')||document.querySelector('dialog[open]'))return;
   if(e.code==='KeyR'){e.preventDefault();research();}
-  else if(e.code==='Enter'&&!e.repeat&&!busy&&e.ctrlKey){e.preventDefault();finish();}
-  else if(e.code==='Escape'){selected=null;city=null;hud();}
+  else if(e.code==='Enter'&&!e.repeat&&!busy&&e.ctrlKey){e.preventDefault();tactics.requestEnd();}
+  else if(e.code==='KeyN'&&!e.repeat&&!busy){e.preventDefault();nextUnit();}
+  else if(e.code==='KeyF'&&!busy){const u=state.units.find(u=>u.id===selected);if(u){e.preventDefault();board.focusUnit(u);}}
+  else if(e.code==='KeyG'&&!busy&&selected){e.preventDefault();transact({type:'guard',id:selected});}
+  else if(e.code==='Escape'&&!busy){selected=null;city=null;hud();}
  });
 }
 export async function enterSequential(team='ally'){
